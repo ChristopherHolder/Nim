@@ -4,8 +4,11 @@ __maintainer_ = 'Christopher Holder'
 from net import EthConnection
 
 def main():
-    con = EthConnection()
-    con.run()
+    eth = EthConnection()
+    eth.run()
+
+
+
 
 
 if __name__ == '__main__':

@@ -1,7 +1,7 @@
 import time
-from web3 import Web3,HTTPProvider
+import json
+from web3 import Web3,HTTPProvider,IPCProvider
 from web3.middleware import geth_poa_middleware
-
 
 class EthConnection:
     def __init__(self,type = 'infura',network='rinkeby',token ='n9LBfW1SzRzIjZfK5MfC'):
@@ -16,8 +16,8 @@ class EthConnection:
                 self.web3 = Web3(HTTPProvider('https://' + self.network + '.infura.io/'+self.token))
                 if self.network == 'rinkeby':
                     self.web3.middleware_stack.inject(geth_poa_middleware, layer=0)
-            else:
-                self.web3 = Web3(HTTPProvider('http://localhost:8545'))
+            elif self.type == 'local' or self.type =='ipc':
+                self.web3 = Web3(IPCProvider())
             self.time = time.asctime(time.localtime())
         except:
             print('Connection Error')
