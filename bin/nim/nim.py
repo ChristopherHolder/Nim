@@ -1,3 +1,6 @@
+"""
+nim.py - Main file of the Project Nim prototype.
+"""
 __author__ = 'Christopher Holder'
 __maintainer_ = 'Christopher Holder'
 

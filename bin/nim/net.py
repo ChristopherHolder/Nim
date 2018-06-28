@@ -1,3 +1,7 @@
+"""
+net.py - Manages the connections between the Ethereum Node and the program through
+a Web3py wrapper.
+"""
 import time
 import json
 from web3 import Web3,HTTPProvider,IPCProvider
@@ -20,6 +24,7 @@ class EthConnection:
                 self.web3 = Web3(IPCProvider())
             self.time = time.asctime(time.localtime())
         except:
+            # TODO: Deal with the specific exceptions.
             print('Connection Error')
             return False
         else:
