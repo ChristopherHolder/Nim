@@ -6,8 +6,9 @@ import time
 import json
 from web3 import Web3,HTTPProvider,IPCProvider
 from web3.middleware import geth_poa_middleware
-from eth_account.messages import defunct_hash_message
-from hash import Key
+
+from hash import Key,hash
+
 
 class EthConnection:
     def __init__(self,type = 'infura',network='rinkeby',token ='n9LBfW1SzRzIjZfK5MfC'):
@@ -52,18 +53,11 @@ class EthConnection:
     def displayKeys(self):
         self.__key.display()
 
-
-    # TODO: To be implemented
-    def web3encrypt(self):
-        pass
-
-    # TODO: To be implemented
-    def web3decrypt(self):
-        pass
-
-    def hash(self,msg):
-        return defunct_hash_message(text=msg)
-
+    #Signs an arbitrary string and returns a signature object
     def signMsg(self,msg):
-        return self.__web3.eth.account.signHash(self.hash(msg), private_key=self.__key.getPrivate())
+        return self.__web3.eth.account.signHash(hash(msg), private_key=self.__key.getPrivate())
 
+
+    #Returns the address of the signee given a hash message and a hash signature
+    def whoSign(self,msgHash,signHash):
+        return self.__web3.eth.account.recoverHash(msgHash, signature=signHash)

@@ -6,7 +6,8 @@ of tools in dealing with private and public key operations.
 eth_account - useful for key operations and account encryption without running an ethereum node.
 """
 from eth_account import Account
-import getpass
+from eth_account.messages import defunct_hash_message
+from web3 import Web3
 
 class Key:
     def __init__(self,path = None):
@@ -53,9 +54,22 @@ class Key:
         if self.lock == False:
             return self.__privateKey
 
+def hash(msg):
+    return defunct_hash_message(text=msg)
 
-if __name__ == '__main__':
-    key = Key()
-    key.load('/home/abzu/.ethereum/rinkeby/keystore/UTC--2018-06-29T15-24-00.421088464Z--7f039dee9c7d69db4009089d60b0eb5f355c3a81')
-    key.decrypt(getpass.getpass())
-    key.getAddress()
+def byte32(val):
+    return Web3.toHex(Web3.toBytes(val).rjust(32, b'\0'))
+
+#Formats a web3py signature object to be sent to a solidity contract.
+def format(signObj):
+    return (Web3.toHex(signObj.messageHash),signObj.v,byte32(signObj.r),byte32(signObj.s))
+
+#If the hex string messages and signature are provided.
+#This returns a tuple with hexMsg ,v,r and s.
+#All values besides v should be hex Strings
+def decode(hexMsg,hexSig):
+    msgHash = defunct_hash_message(hexstr=hexMsg)
+    hexMsgHash = Web3.toHex(msgHash)
+    sig = Web3.toBytes(hexstr=hexSig)
+    v, hex_r, hex_s = Web3.toInt(sig[-1]), Web3.toHex(sig[:32]), Web3.toHex(sig[32:64])
+    return (hexMsgHash,v,hex_r,hex_s)

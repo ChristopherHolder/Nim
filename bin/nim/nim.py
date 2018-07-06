@@ -8,7 +8,7 @@ import subprocess
 import getpass
 
 from net import EthConnection
-
+from hash import hash
 
 def main():
     eth = EthConnection()
@@ -17,14 +17,15 @@ def main():
     msg = input('Message to sign: ')
 
     eth.loadKey(path)
-    eth.decryptKey(getpass.getpass())
+    eth.decryptKey('hola123')
 
-    hash = eth.hash(msg)
     sign = eth.signMsg(msg)
-    print('Message hash: ' + str(hash))
-    print('Message hash in signature object: '+str(sign.messageHash))
+    print('Message hash: '+str(sign.messageHash))
+
     print('Signature: '+ str(sign.signature))
 
+
+    print('Recover Hash : '+eth.whoSign(sign.messageHash,sign.signature))
 
 
 
