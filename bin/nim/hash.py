@@ -73,3 +73,8 @@ def decode(hexMsg,hexSig):
     sig = Web3.toBytes(hexstr=hexSig)
     v, hex_r, hex_s = Web3.toInt(sig[-1]), Web3.toHex(sig[:32]), Web3.toHex(sig[32:64])
     return (hexMsgHash,v,hex_r,hex_s)
+
+#Input: (types) list of solidity types(strings).(values) list of values to hash(primitives)
+#Returns: Sha3 hash(HexBytes)
+def sha3(types,values):
+    return Web3.soliditySha3(types,values)

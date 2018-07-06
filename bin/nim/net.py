@@ -19,6 +19,7 @@ class EthConnection:
         self.time = None
         self.__running =False
         self.__key = Key()
+    #Connects to a node in a specific Ethereum network.
     def __call__(self, *args, **kwargs):
         try:
             if self.type == 'infura':
@@ -38,18 +39,20 @@ class EthConnection:
                 print('...Active connection at : ' + self.time)
                 return True
             self.__running = True
+    #Alias to the () operator
     def run(self):
         if self.__call__():
             return True
         else:
             return False
-
+    #Loads key from given path
     def loadKey(self,path):
         self.__key.load(path)
-
+    #Decrypts keyfile(JSON) with
     def decryptKey(self,passphrase):
         self.__key.decrypt(passphrase)
 
+    #Displays key file
     def displayKeys(self):
         self.__key.display()
 
@@ -58,6 +61,11 @@ class EthConnection:
         return self.__web3.eth.account.signHash(hash(msg), private_key=self.__key.getPrivate())
 
 
-    #Returns the address of the signee given a hash message and a hash signature
+    #Returns the address(Hex String) of the signee given a hash message and a hash signature
     def whoSign(self,msgHash,signHash):
         return self.__web3.eth.account.recoverHash(msgHash, signature=signHash)
+
+    #Input : Hex String address(Could also be an ENS name)
+    #Returns balance in ether(Decimal).
+    def getBalance(self,address):
+        return self.__web3.fromWei(self.__web3.eth.getBalance(address),'ether')
