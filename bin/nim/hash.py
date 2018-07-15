@@ -13,10 +13,6 @@ class Key:
     def __init__(self,path = None):
         if path != None:
             self.load(path)
-        self.keyFile = ''
-        self.__privateKey = None
-        self.publicKey = None
-        self.lock = None
 
     def load(self,path):
         if 'keystore' in path:
@@ -35,6 +31,8 @@ class Key:
         if self.keyFile != None:
             try:
                 self.__privateKey = Account.decrypt(self.keyFile,passphrase)
+                self.account = Account.privateKeyToAccount(self.__privateKey)
+                self.address = self.account.address
             except:
                 print('Wrong passphrase')
                 return False
