@@ -3,12 +3,16 @@ net.py - Manages the connections between the Ethereum Node and the program throu
 a Web3py wrapper.
 """
 import time
-import json
+import web3.eth
 from web3 import Web3,HTTPProvider,IPCProvider
 from web3.middleware import geth_poa_middleware
+from hash import Key,hash,sha3
 
-from hash import Key,hash
+#TODO: Expand list of Ethereum network IDs.
 
+netIds = {'main':1,'morden':2,'ropsten':3,'rinkeby':4,'kovan':42,'sokol':77,'core':99}
+#TODO:Expand support and test other Eth networks.
+#TODO: Disable key args for the EthConnection constructor.
 
 class EthConnection:
     def __init__(self,type = 'infura',network='rinkeby',token ='n9LBfW1SzRzIjZfK5MfC'):
@@ -39,6 +43,7 @@ class EthConnection:
                 print('...Active connection at : ' + self.time)
                 return True
             self.__running = True
+
     #Alias to the () operator
     def run(self):
         if self.__call__():
@@ -49,7 +54,8 @@ class EthConnection:
     def loadKey(self,path):
         self.__key.load(path)
     #Decrypts keyfile(JSON) with
-    def decryptKey(self,passphrase):
+    def decryptKey(self,path,passphrase):
+        self.__key.load(path)
         self.__key.decrypt(passphrase)
 
     #Displays key file
@@ -60,12 +66,21 @@ class EthConnection:
     def signMsg(self,msg):
         return self.__web3.eth.account.signHash(hash(msg), private_key=self.__key.getPrivate())
 
-
+    #Input: Message Hash and signature.(Can be both Hex Strings or HexBytes)
     #Returns the address(Hex String) of the signee given a hash message and a hash signature
-    def whoSign(self,msgHash,signHash):
-        return self.__web3.eth.account.recoverHash(msgHash, signature=signHash)
+    def whoSign(self,msgHash,signature):
+        return self.__web3.eth.account.recoverHash(msgHash, signature=signature)
+
+    def signCheck(self,recipient, amount, nonce, contractAddress):
+        sha3(["address", "uint256", "uint256", "address"],[recipient, amount, nonce, contractAddress])
 
     #Input : Hex String address(Could also be an ENS name)
     #Returns balance in ether(Decimal).
     def getBalance(self,address):
-        return self.__web3.fromWei(self.__web3.eth.getBalance(address),'ether')
+        return str(self.__web3.fromWei(self.__web3.eth.getBalance(address),'ether')) + ' Eth'
+
+    #TODO: Add Ethereum Raw transactions support.
+    #TODO: Extend support for gas price calculation strategies.
+
+    def signTrans(self):
+        print(str(Web3.eth.generateGasPrice()))

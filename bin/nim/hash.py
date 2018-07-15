@@ -42,10 +42,6 @@ class Key:
                 self.lock = False
                 return True
 
-    #TODO: To be implemented
-    def encrypt(self,passphrase):
-        pass
-
     def display(self):
         print('KeyFile (JSON): '+str(self.keyFile))
         #print('Private Key(HexBytes): '+str(self.__privateKey))
@@ -56,7 +52,6 @@ class Key:
 
 def hash(msg):
     return defunct_hash_message(text=msg)
-
 def byte32(val):
     return Web3.toHex(Web3.toBytes(val).rjust(32, b'\0'))
 
