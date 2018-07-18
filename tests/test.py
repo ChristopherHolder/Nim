@@ -1,10 +1,10 @@
 #Runs infraestructure and connection tests.
 
-import sys
-
+import sys,os
 sys.path.insert(0,'../bin/nim')
 
 from eth import EthConnection
+
 
 
 def main():
@@ -25,7 +25,10 @@ def main():
     #print('Balance of account: '+eth.getBalance(signee))
 
     #infura.send('0x486F5A3F0EA8b237bf6B6b10C166ddF9e3041192',0.01))
-    a = infura.checkMined('0x2df10817d9555547d6c58ccbee03ba6950d37ff4c1999c998d67e34aed729857')
-    print(a['blockHash'])
+    #a = infura.checkMined('0x2df10817d9555547d6c58ccbee03ba6950d37ff4c1999c998d67e34aed729857')
+    #print(a['blockHash'])
+    txn = infura.deploy('greeter.sol')
+    print(txn)
+
 if __name__ == '__main__':
     main()

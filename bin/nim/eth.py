@@ -4,13 +4,14 @@ a Web3py wrapper.
 """
 import time
 import json
-from solc import compile_source
+from solc import compile_source,compile_files
 from ethtoken.abi import EIP20_ABI
 from web3 import Web3,HTTPProvider,IPCProvider,middleware
 from web3.middleware import geth_poa_middleware
 from hash import Key,hash,sha3,byte32
+from solc import compile_standard
 
-
+solpath = '/home/abzu/PycharmProjects/Nim/bin/solidity/'
 #TODO: Expand list of Ethereum network IDs.
 
 netIds = {'main':1,'morden':2,'ropsten':3,'rinkeby':4,'kovan':42,'sokol':77,'core':99}
@@ -103,13 +104,39 @@ class EthConnection:
                      'nonce': nonce,
                      'chainId': netIds[self.network]}
 
-            #TODO: Handle pending transactions
             self.__web3.eth.enable_unaudited_features()
             signObj = self.__web3.eth.account.signTransaction(trans,self.__key.getPrivate())
-            #Broadcasts it and returns transaction hash
-            return byte32(self.__web3.eth.sendRawTransaction(signObj.rawTransaction))
-    def checkMined(self,txnHash):
-        return self.__web3.eth.getTransactionReceipt(txnHash)
+            #Broadcasts it and returns transaction hash as a hex string.
+            return self.wait_for_receipt(byte32(self.__web3.eth.sendRawTransaction(signObj.rawTransaction)),15)
 
-    def deploy(self,path):
-        pass
+    def wait_for_receipt(self,tx_hash, poll_interval):
+        while True:
+            tx_receipt = self.__web3.eth.getTransactionReceipt(tx_hash)
+            if tx_receipt:
+                return tx_receipt
+            print('...Pending')
+            time.sleep(poll_interval)
+
+    #Deploys a solidity source file and returns the addresss of the contract.
+    def deploy(self,path,price=4,value=0):
+        #TODO: handle exception for bad compilation.
+        path = solpath + path
+        f = open(path,'r')
+        compiled_sol = compile_source(f.read())
+        f.close()
+        contractName, contract_interface = compiled_sol.popitem()
+        bin,abi = contract_interface['bin'],contract_interface['abi']
+        contract = self.__web3.eth.contract(abi=abi,bytecode =bin )
+        nonce = self.__web3.eth.getTransactionCount(self.__key.address)
+        trans = contract.constructor().buildTransaction({'gasPrice':Web3.toWei(price,'gwei')})
+        trans['nonce'] = nonce
+        if value == 0:
+            pass
+        else:
+            trans['value'] = Web3.toWei(value,'ether')
+        self.__web3.eth.enable_unaudited_features()
+        signObj = self.__web3.eth.account.signTransaction(trans, self.__key.getPrivate())
+        txnHash =  byte32(self.__web3.eth.sendRawTransaction(signObj.rawTransaction))
+        return self.wait_for_receipt(txnHash,15)['contractAddress']
+
+
