@@ -16,19 +16,20 @@ def main():
 
     infura.decryptKey(path,'hola123')
 
-    #sign = eth.signMsg(msg)
+    #sign = infura.signMsg(msg)
     #print('Message hash: '+str(sign.messageHash))
     #print('Signature: '+ str(sign.signature))
     #print('Recover Hash : ',end='')
-    #signee = eth.whoSign(sign.messageHash,sign.signature)
+    #signee = infura.whoSign(sign.messageHash,sign.signature)
     #print(signee)
-    #print('Balance of account: '+eth.getBalance(signee))
+    #print('Balance of account: '+str(infura.getBalance(signee)))
 
     #infura.send('0x486F5A3F0EA8b237bf6B6b10C166ddF9e3041192',0.01))
     #a = infura.checkMined('0x2df10817d9555547d6c58ccbee03ba6950d37ff4c1999c998d67e34aed729857')
     #print(a['blockHash'])
-    txn = infura.deploy('greeter.sol')
-    print(txn)
+    # 0xa694bd52c8d73951b3cFC0ce069Ae7FB890ECFc4
+    address = infura.deploy('greeter.sol','hey')
+    #infura.call('0xa694bd52c8d73951b3cFC0ce069Ae7FB890ECFc4','greet')
 
 if __name__ == '__main__':
     main()

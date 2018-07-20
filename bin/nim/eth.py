@@ -3,20 +3,28 @@ eth.py - Manages the connections between the Ethereum Node and the program throu
 a Web3py wrapper.
 """
 import time
-import json
-from solc import compile_source,compile_files
-from ethtoken.abi import EIP20_ABI
+import sqlite3
+import pickle
+
+from collections import deque
+from solc import compile_source
 from web3 import Web3,HTTPProvider,IPCProvider,middleware
 from web3.middleware import geth_poa_middleware
 from hash import Key,hash,sha3,byte32
-from solc import compile_standard
+
 
 solpath = '/home/abzu/PycharmProjects/Nim/bin/solidity/'
-#TODO: Expand list of Ethereum network IDs.
-
 netIds = {'main':1,'morden':2,'ropsten':3,'rinkeby':4,'kovan':42,'sokol':77,'core':99}
+
+#TODO: Generalize all file paths.
+#TODO: Expand list of Ethereum network IDs.
 #TODO:Expand support and test other Eth networks.
 #TODO: Disable key args for the EthConnection constructor.
+#TODO: handle exception for bad compilation.
+#TODO: Restructuting ETH Connection and adjacent functionality into different classes.
+# TODO: Deal with the specific exceptions.
+# TODO: Create custom exceptions.
+#TODO: Add appropiate gas price recalculation. Connecting to eth gas station.
 
 #Connects to a node in a specific network
 class EthConnection:
@@ -26,6 +34,12 @@ class EthConnection:
         self.token = token
         self.__running =False
         self.__key = Key()
+        self.contracts = deque()
+        self.conn = sqlite3.connect('../nim.db')
+        self.c = self.conn.cursor()
+        self.c.execute('CREATE TABLE IF NOT EXISTS Deployed (ID INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,contractName STRING,address STRING,contractObj BLOB)')
+        self.conn.commit()
+
     def __call__(self, *args, **kwargs):
         try:
             if self.type == 'infura':
@@ -36,8 +50,6 @@ class EthConnection:
                 self.__web3 = Web3(IPCProvider())
             self.time = time.asctime(time.localtime())
         except:
-            # TODO: Deal with the specific exceptions.
-            # TODO: Create custom exceptions.
             print('Connection Error')
             return False
         else:
@@ -47,7 +59,6 @@ class EthConnection:
                 return True
             self.__running = True
 
-
     #Alias to the () operator
     def run(self):
         if self.__call__():
@@ -56,9 +67,11 @@ class EthConnection:
             return False
     #Loads key from given path
     def loadKey(self,path):
+        self.__web3.eth.enable_unaudited_features()
         self.__key.load(path)
     #Decrypts keyfile(JSON) with
     def decryptKey(self,path,passphrase):
+        self.__web3.eth.enable_unaudited_features()
         self.__key.load(path)
         self.__key.decrypt(passphrase)
 
@@ -83,17 +96,10 @@ class EthConnection:
     def getBalance(self,address):
         return self.__web3.fromWei(self.__web3.eth.getBalance(address),'ether')
 
-    #TODO: Add Ethereum Raw transactions support.
-    #TODO: Extend support for more gas price calculation strategies.
-    #TODO: In the future I must implement a block caching solution.
-    #TODO: Restructuting ETH Connection and adjacent functionality into different classes.
-
-
     #Input: to(HexString),value(int) in Eth,gasPrice in gwei(int).
     #Returns hash of transaction.
     def send(self,to,value,price=4):
         if self.type=='infura':
-            #TODO: Add appropiate gas price recalculation. Connecting to eth gas station.
             #Gas estimation also depends on the specified ethereum network
             nonce = self.__web3.eth.getTransactionCount(self.__key.address)
             gas = self.__web3.eth.estimateGas({'to':to,'from':self.__key.address,'value':Web3.toWei(value,'ether')})
@@ -106,10 +112,9 @@ class EthConnection:
 
             self.__web3.eth.enable_unaudited_features()
             signObj = self.__web3.eth.account.signTransaction(trans,self.__key.getPrivate())
-            #Broadcasts it and returns transaction hash as a hex string.
-            return self.wait_for_receipt(byte32(self.__web3.eth.sendRawTransaction(signObj.rawTransaction)),15)
+            return self.__wait_for_receipt(byte32(self.__web3.eth.sendRawTransaction(signObj.rawTransaction)),10)
 
-    def wait_for_receipt(self,tx_hash, poll_interval):
+    def __wait_for_receipt(self,tx_hash, poll_interval):
         while True:
             tx_receipt = self.__web3.eth.getTransactionReceipt(tx_hash)
             if tx_receipt:
@@ -117,9 +122,8 @@ class EthConnection:
             print('...Pending')
             time.sleep(poll_interval)
 
-    #Deploys a solidity source file and returns the addresss of the contract.
-    def deploy(self,path,price=4,value=0):
-        #TODO: handle exception for bad compilation.
+    #Deploys a solidity contract into the network and returns the addresss of the contract.
+    def deploy(self,path,*arg,price=4,value=0):
         path = solpath + path
         f = open(path,'r')
         compiled_sol = compile_source(f.read())
@@ -128,7 +132,10 @@ class EthConnection:
         bin,abi = contract_interface['bin'],contract_interface['abi']
         contract = self.__web3.eth.contract(abi=abi,bytecode =bin )
         nonce = self.__web3.eth.getTransactionCount(self.__key.address)
-        trans = contract.constructor().buildTransaction({'gasPrice':Web3.toWei(price,'gwei')})
+        if arg == None:
+            trans = contract.constructor().buildTransaction({'gasPrice':Web3.toWei(price,'gwei')})
+        else:
+            trans = contract.constructor(*arg).buildTransaction({'gasPrice': Web3.toWei(price, 'gwei')})
         trans['nonce'] = nonce
         if value == 0:
             pass
@@ -137,6 +144,18 @@ class EthConnection:
         self.__web3.eth.enable_unaudited_features()
         signObj = self.__web3.eth.account.signTransaction(trans, self.__key.getPrivate())
         txnHash =  byte32(self.__web3.eth.sendRawTransaction(signObj.rawTransaction))
-        return self.wait_for_receipt(txnHash,15)['contractAddress']
+        address =  self.__wait_for_receipt(txnHash,10)['contractAddress']
+        self.conn.commit()
+        return address
 
+    def call(self,contractAddress,methodName,*arg,price=4,value=0):
+        #self.c.execute('CREATE TABLE IF NOT EXISTS Deploy (ID INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,times REAL)')
+        pass
+        #nonce = self.__web3.eth.getTransactionCount(self.__key.address)
+        #txn = c.greet().buildTransaction({'nonce': nonce})
+
+        #func = c.functions.greet().buildTransaction({'nonce':self.__web3.eth.getTransactionCount(self.__key.address)})
+        #txn = func(*arg).buildTransaction({'nonce':self.__web3.eth.getTransactionCount(self.__key.address)})
+        #print(txn)
+        #return self.__wait_for_receipt(txnHash, 10)
 
