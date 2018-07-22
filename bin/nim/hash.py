@@ -71,3 +71,6 @@ def decode(hexMsg,hexSig):
 #Returns: Sha3 hash(HexBytes)
 def sha3(types,values):
     return Web3.soliditySha3(types,values)
+
+def signCheck(self,recipient, amount, nonce, contractAddress):
+    sha3(["address", "uint256", "uint256", "address"],[recipient, amount, nonce, contractAddress])

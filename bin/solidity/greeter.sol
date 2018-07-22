@@ -12,6 +12,6 @@ contract Greeter {
     }
 
     function greet() constant returns (string) {
-        return greeting;
+        return 6;
     }
 }
