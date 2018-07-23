@@ -1,13 +1,13 @@
 #Runs infraestructure and connection tests.
 
 import sys,os,time
-sys.path.insert(0,'../bin/nim')
+sys.path.insert(0,'../bin')
 
 from net import Infura
 
 token = 'n9LBfW1SzRzIjZfK5MfC'
 path = '/home/abzu/.ethereum/rinkeby/keystore/UTC--2018-06-29T15-24-00.421088464Z--7f039dee9c7d69db4009089d60b0eb5f355c3a81'
-
+#TODO: Actual test should check for actual transactions.
 def main():
     infura = Infura('rinkeby',token)
     infura.run()
@@ -24,9 +24,8 @@ def main():
     #print('Balance of account: '+str(infura.getBalance(signee)))
 
     #infura.send('0x486F5A3F0EA8b237bf6B6b10C166ddF9e3041192',0.01)
-    #address = infura.deploy('greeter.sol','hey')
-
-    print(infura.call('0x0939067C575923b5A5022e67eaDdd5D55E468D32','greet'))
+    #address = infura.deploy('re.sol','hey')
+    #print(infura.call(address,'greet'))
 
 
 

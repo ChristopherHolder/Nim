@@ -5,16 +5,18 @@ a Web3py wrapper.
 import time
 import sqlite3
 import pickle
+import datetime
+
 import subprocess
 
-from collections import deque
+
 from solc import compile_source
 from web3 import Web3,HTTPProvider,IPCProvider,middleware
 from web3.middleware import geth_poa_middleware
 from hash import Key,hash,sha3,byte32
 
 
-solpath = '/home/abzu/PycharmProjects/Nim/bin/solidity/'
+solpath = '/home/abzu/PycharmProjects/Nim/res/solidity/'
 
 netIds = {'main':1,'morden':2,'ropsten':3,'rinkeby':4,'kovan':42,'sokol':77,'core':99}
 
@@ -38,10 +40,10 @@ class Connection:
         self.token = token
         self.running =False
         self.key = Key()
-        self.conn = sqlite3.connect('../nim.db')
+        self.conn = sqlite3.connect('../res/nim.db')
         self.c = self.conn.cursor()
         #self.c.execute('DROP TABLE Deployed')
-        self.c.execute('CREATE TABLE IF NOT EXISTS Deployed (address STRING UNIQUE,filename STRING,contractObj BLOB)')
+        self.c.execute('CREATE TABLE IF NOT EXISTS Deployed (address STRING UNIQUE,filename STRING,contractObj BLOB,dat datetime)')
         self.conn.commit()
 
     def __call__(self, *args, **kwargs):
@@ -96,7 +98,12 @@ class Connection:
     def getBalance(self,address):
         return self.web3.fromWei(self.web3.eth.getBalance(address), 'ether')
 
-
+    def searchContract(self,filename):
+        self.c.execute('SELECT address FROM Deployed WHERE filename = ? ORDER BY dat DESC',(filename,))
+        data = self.c.fetchone()
+        if data == None:
+            return False
+        return data[0]
 
 class Infura(Connection):
 
@@ -131,8 +138,6 @@ class Infura(Connection):
             print('...Pending')
             time.sleep(poll_interval)
 
-    def isRunning(self):
-        return self.running
 
     def deploy(self, path, *arg, price=4, value=0):
         '''
@@ -140,10 +145,7 @@ class Infura(Connection):
         Also stores the serialized compile object on a sql database.
         '''
         # self.c.execute('SELECT address FROM Deployed WHERE address = ?', (contractAddress,))
-        data = self.c.fetchone()
-        if data == None:
-            print('Contract not deployed through Nim.')
-            return False
+
         solname = path
         path = solpath + path
         f = open(path, 'r')
@@ -167,8 +169,8 @@ class Infura(Connection):
         signObj = self.web3.eth.account.signTransaction(txn, self.key.getPrivate())
         txnHash = byte32(self.web3.eth.sendRawTransaction(signObj.rawTransaction))
         address = self.__wait_for_receipt(txnHash, 10)['contractAddress']
-        entry = (address, solname, blob)
-        self.c.execute('INSERT INTO Deployed(address,filename,contractObj) VALUES (?,?,?)', entry)
+        entry = (address, solname, blob,datetime.datetime.now())
+        self.c.execute('INSERT INTO Deployed(address,filename,contractObj,dat) VALUES (?,?,?,?)', entry)
         self.conn.commit()
         return address
 

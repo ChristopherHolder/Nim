@@ -1,9 +1,9 @@
 pragma solidity ^0.4.0;
-
+//
 contract Greeter {
     string public greeting;
 
-    function Greeter(string k) {
+    constructor(string k) {
         greeting = k;
     }
 
@@ -12,6 +12,6 @@ contract Greeter {
     }
 
     function greet() constant returns (string) {
-        return 6;
+        return greeting;
     }
 }
