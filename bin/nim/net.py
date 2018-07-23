@@ -21,18 +21,16 @@ netIds = {'main':1,'morden':2,'ropsten':3,'rinkeby':4,'kovan':42,'sokol':77,'cor
 #TODO: Generalize all file paths.
 #TODO: Expand list of Ethereum network IDs.
 #TODO:Expand support and test other Eth networks.
-#TODO: Disable key args for the EthConnection constructor.
 #TODO: handle exception for bad compilation.
 #TODO: Restructuting ETH Connection and adjacent functionality into different classes.
-#TODO: Deal with the specific exceptions.
 #TODO: Create custom exceptions.
 #TODO: Add appropiate gas price recalculation. Connecting to eth gas station.
 #TODO: Restructure project file structure.
-#TODO: Check if contract was already deployed.
 
 class Connection:
     '''
     Base class for the different type of connections with the Ethereum network.
+    Not meant to be instantiated by itself.
     '''
     def __init__(self,type,network,token):
         self.type = type
@@ -128,6 +126,7 @@ class Infura(Connection):
         while True:
             tx_receipt = self.web3.eth.getTransactionReceipt(tx_hash)
             if tx_receipt:
+                print('Transaction mined.')
                 return tx_receipt
             print('...Pending')
             time.sleep(poll_interval)
@@ -181,7 +180,7 @@ class Infura(Connection):
         :param arg: Respective arguments for the method
         :param price: (unsigned int) price in gwei for gas
         :param value: (ether)value for the transaction in ether.
-        :return: simulated and locally calculated return values for the method.
+        :return: tuple with locally calculated return value at [0] and transaction receipt at [1] for the method.
         '''
         self.c.execute('SELECT contractObj FROM Deployed WHERE address = ?', (contractAddress,))
         data = self.c.fetchone()
@@ -208,12 +207,6 @@ class Infura(Connection):
         signObj = self.web3.eth.account.signTransaction(txn, self.key.getPrivate())
         txnHash = byte32(self.web3.eth.sendRawTransaction(signObj.rawTransaction))
 
-        self.__wait_for_receipt(txnHash, 10)
-        return func(*arg).call()
 
-    def eventcall(self):
-        '''
-        Deploys transaction and listens for events to get the values back.
-        :return:
-        '''
-        pass
+        return (func(*arg).call(),self.__wait_for_receipt(txnHash, 10))
+
