@@ -1,8 +1,10 @@
-pragma solidity ^0.4.20;
 //Written by: Steve Marx
-//Date: Approximately February 17, 2018
+//Date: Approximately February 17th, 2018
 //Taken from an online article:
 //https://programtheblockchain.com/posts/2018/02/17/signing-and-verifying-messages-in-ethereum/
+
+pragma solidity ^0.4.20;
+
 contract ReceiverPays {
     address owner = msg.sender;
 
@@ -71,6 +73,7 @@ contract ReceiverPays {
     }
 
     // Builds a prefixed hash to mimic the behavior of eth_sign.
+
     function prefixed(bytes32 hash) internal pure returns (bytes32) {
         return keccak256("\x19Ethereum Signed Message:\n32", hash);
     }

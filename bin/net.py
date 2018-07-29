@@ -7,13 +7,12 @@ import sqlite3
 import pickle
 import datetime
 
-import subprocess
 
 
 from solc import compile_source
 from web3 import Web3,HTTPProvider,IPCProvider,middleware
 from web3.middleware import geth_poa_middleware
-from hash import Key,hash,sha3,byte32
+from hash import Key,byte32,hash
 
 
 solpath = '/home/abzu/PycharmProjects/Nim/res/solidity/'
@@ -24,10 +23,9 @@ netIds = {'main':1,'morden':2,'ropsten':3,'rinkeby':4,'kovan':42,'sokol':77,'cor
 #TODO: Expand list of Ethereum network IDs.
 #TODO:Expand support and test other Eth networks.
 #TODO: handle exception for bad compilation.
-#TODO: Restructuting ETH Connection and adjacent functionality into different classes.
 #TODO: Create custom exceptions.
 #TODO: Add appropiate gas price recalculation. Connecting to eth gas station.
-#TODO: Restructure project file structure.
+
 
 class Connection:
     '''
@@ -39,6 +37,7 @@ class Connection:
         self.network = network
         self.token = token
         self.running =False
+        self.lock = True
         self.key = Key()
         self.conn = sqlite3.connect('../res/nim.db')
         self.c = self.conn.cursor()
@@ -72,22 +71,34 @@ class Connection:
         else:
             return False
     #Loads key from given path
+    def isLock(self):
+        return self.lock
     def loadKey(self,path):
         self.web3.eth.enable_unaudited_features()
         self.key.load(path)
-    #Decrypts keyfile(JSON) with
+    #Decrypts keyfile(JSON) with passphrase.
     def decryptKey(self,path,passphrase):
         self.web3.eth.enable_unaudited_features()
         self.key.load(path)
         self.key.decrypt(passphrase)
+        self.address = self.key.address
+        self.lock = False
 
     #Displays key file
     def displayKeys(self):
         self.key.display()
 
     #Signs an arbitrary string and returns a signature object
-    def signMsg(self,msg):
-        return self.web3.eth.account.signHash(hash(msg), private_key=self.key.getPrivate())
+    def signStr(self,s):
+        return self.web3.eth.account.signHash(hash(s), private_key=self.key.getPrivate())
+
+    def signMsg(self,msgHash):
+        '''
+        #Returns sign obj of hashed message.
+        :param msgHash:
+        :return:
+        '''
+        return self.web3.eth.account.signHash(msgHash, private_key=self.key.getPrivate())
 
     #Input: Message Hash and signature.(Can be both Hex Strings or HexBytes)
     #Returns the address(Hex String) of the signee given a hash message and a hash signature
@@ -102,11 +113,14 @@ class Connection:
         self.c.execute('SELECT address FROM Deployed WHERE filename = ? ORDER BY dat DESC',(filename,))
         data = self.c.fetchone()
         if data == None:
+            print('Contract not deployed through Nim')
             return False
         return data[0]
 
 class Infura(Connection):
-
+    '''
+    Child class to connection, cattered to
+    '''
     def __init__(self,network,token):
         Connection.__init__(self,'infura', network, token)
 
