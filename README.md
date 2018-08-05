@@ -8,3 +8,7 @@ Project Nim seeks to deploy a state channel infrastructure for the communication
  
  - Writing multiple Web3py-based wrappers for network interactions and private key operations.
  
+ - Smart contract and network testing responses 
+ 
+ - Eth gas station support (Not develop yet)
+ 
