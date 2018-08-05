@@ -60,8 +60,13 @@ def hash(msg):
 def byte32(val):
     return Web3.toHex(Web3.toBytes(val).rjust(32, b'\0'))
 
-#Formats a web3py signature object to be sent to a solidity contract.
+
 def format(signObj):
+    '''
+    Formats a web3py signature object to be sent to a solidity contract.
+    :param signObj:
+    :return:
+    '''
     return (Web3.toHex(signObj.messageHash),signObj.v,byte32(signObj.r),byte32(signObj.s))
 
 

@@ -6,7 +6,7 @@ import time
 import sqlite3
 import pickle
 import datetime
-
+import logging
 
 
 from solc import compile_source
@@ -22,7 +22,6 @@ netIds = {'main':1,'morden':2,'ropsten':3,'rinkeby':4,'kovan':42,'sokol':77,'cor
 #TODO: Generalize all file paths.
 #TODO: Expand list of Ethereum network IDs.
 #TODO:Expand support and test other Eth networks.
-#TODO: handle exception for bad compilation.
 #TODO: Create custom exceptions.
 #TODO: Add appropiate gas price recalculation. Connecting to eth gas station.
 
@@ -32,10 +31,9 @@ class Connection:
     Base class for the different type of connections with the Ethereum network.
     Not meant to be instantiated by itself.
     '''
-    def __init__(self,type,network,token):
+    def __init__(self,type,network):
         self.type = type
         self.network = network
-        self.token = token
         self.running =False
         self.lock = True
         self.key = Key()
@@ -55,14 +53,16 @@ class Connection:
                 self.web3 = Web3(IPCProvider())
             self.time = time.asctime(time.localtime())
         except:
-            print('Connection Error')
+            logging.error('Connection Error')
             return False
         else:
             print('...Connection established with the ' + self.network + ' Ethereum network')
+            logging.info('...Connection established with the ' + self.network + ' Ethereum network')
             if self.web3.isConnected():
                 print('...Active connection at : ' + self.time)
+                self.running = True
                 return True
-            self.running = True
+
 
     #Alias to the () operator, and guarantees a boolean value.
     def run(self):
@@ -73,38 +73,57 @@ class Connection:
     #Loads key from given path
     def isLock(self):
         return self.lock
+    def isRunning(self):
+        return self.running
     def loadKey(self,path):
         self.web3.eth.enable_unaudited_features()
         self.key.load(path)
-    #Decrypts keyfile(JSON) with passphrase.
+
     def decryptKey(self,path,passphrase):
+        '''
+        :param path: Path to keyfile.
+        :param passphrase: Decrypts keyfile.
+        :return: Decrypts keyfile(JSON) with passphrase.
+        '''
         self.web3.eth.enable_unaudited_features()
         self.key.load(path)
         self.key.decrypt(passphrase)
         self.address = self.key.address
         self.lock = False
-
-    #Displays key file
-    def displayKeys(self):
-        self.key.display()
-
-    #Signs an arbitrary string and returns a signature object
+    def wait_for_receipt(self, tx_hash, poll_interval):
+        '''
+        :param tx_hash: Transaction hash(bytes?)
+        :param poll_interval: Seconds to wait per in-between fetching.
+        :return: Transaction Receipt.
+        '''
+        while True:
+            tx_receipt = self.web3.eth.getTransactionReceipt(tx_hash)
+            if tx_receipt:
+                print('Transaction mined.')
+                return tx_receipt
+            print('...Pending')
+            time.sleep(poll_interval)
     def signStr(self,s):
+        '''
+        :param s: String
+        :return: Signature object of s
+        '''
         return self.web3.eth.account.signHash(hash(s), private_key=self.key.getPrivate())
 
     def signMsg(self,msgHash):
         '''
-        #Returns sign obj of hashed message.
         :param msgHash:
-        :return:
+        :return: Signature object of the message hash.
         '''
         return self.web3.eth.account.signHash(msgHash, private_key=self.key.getPrivate())
 
-    #Input: Message Hash and signature.(Can be both Hex Strings or HexBytes)
-    #Returns the address(Hex String) of the signee given a hash message and a hash signature
     def whoSign(self,msgHash,signature):
+        '''
+        :param msgHash: Hashed message.
+        :param signature: Hex String or Hex Bytes
+        :return: Address of signer
+        '''
         return self.web3.eth.account.recoverHash(msgHash, signature=signature)
-
 
     def getBalance(self,address):
         return self.web3.fromWei(self.web3.eth.getBalance(address), 'ether')
@@ -119,41 +138,33 @@ class Connection:
 
 class Infura(Connection):
     '''
-    Child class to connection, cattered to
+    Child class to connection, customized for interaction with Infura nodes.
     '''
     def __init__(self,network,token):
-        Connection.__init__(self,'infura', network, token)
+        Connection.__init__(self,'infura', network)
+        self.token = token
 
-    # Input: to(HexString),value(int) in Eth,gasPrice in gwei(int).
-    # Returns hash of transaction.
     def send(self, to, value, price=4):
-        if self.type == 'infura':
-            # Gas estimation also depends on the specified ethereum network
-            nonce = self.web3.eth.getTransactionCount(self.key.address)
-            gas = self.web3.eth.estimateGas(
-                {'to': to, 'from': self.key.address, 'value': Web3.toWei(value, 'ether')})
-            trans = {'to': to,
-                     'value': Web3.toWei(value, 'ether'),
-                     'gas': gas,
-                     'gasPrice': Web3.toWei(price, 'gwei'),
-                     'nonce': nonce,
-                     'chainId': netIds[self.network]}
+        '''
+        :param to: Hex string of payment receiver.
+        :param value: Value in Ether
+        :param price: Price of gas
+        :return: Receipt of the transaction.
+        '''
 
-            self.web3.eth.enable_unaudited_features()
-            signObj = self.web3.eth.account.signTransaction(trans, self.key.getPrivate())
-            return self.__wait_for_receipt(byte32(self.web3.eth.sendRawTransaction(signObj.rawTransaction)), 10)
+        # Gas estimation also depends on the specified ethereum network
+        nonce = self.web3.eth.getTransactionCount(self.key.address)
+        gas = self.web3.eth.estimateGas({'to': to, 'from': self.key.address, 'value': Web3.toWei(value, 'ether')})
+        trans = {'to': to,'value': Web3.toWei(value, 'ether'),
+                'gas': gas,'gasPrice': Web3.toWei(price, 'gwei'),
+                'nonce': nonce,'chainId': netIds[self.network]}
 
-    def __wait_for_receipt(self, tx_hash, poll_interval):
-        while True:
-            tx_receipt = self.web3.eth.getTransactionReceipt(tx_hash)
-            if tx_receipt:
-                print('Transaction mined.')
-                return tx_receipt
-            print('...Pending')
-            time.sleep(poll_interval)
+        self.web3.eth.enable_unaudited_features()
+        signObj = self.web3.eth.account.signTransaction(trans, self.key.getPrivate())
+        return self.wait_for_receipt(byte32(self.web3.eth.sendRawTransaction(signObj.rawTransaction)), 10)
 
 
-    def deploy(self, path, *arg, price=4, value=0):
+    def deploy(self, path, *arg, price=2, value=0):
         '''
         Deploys a solidity source file and returns the address of the contract.
         Also stores the serialized compile object on a sql database.
@@ -179,10 +190,12 @@ class Infura(Connection):
             pass
         else:
             txn['value'] = Web3.toWei(value, 'ether')
+        txn['chainId']= netIds[self.network]
+        print(txn)
         self.web3.eth.enable_unaudited_features()
         signObj = self.web3.eth.account.signTransaction(txn, self.key.getPrivate())
         txnHash = byte32(self.web3.eth.sendRawTransaction(signObj.rawTransaction))
-        address = self.__wait_for_receipt(txnHash, 10)['contractAddress']
+        address = self.wait_for_receipt(txnHash, 10)['contractAddress']
         entry = (address, solname, blob,datetime.datetime.now())
         self.c.execute('INSERT INTO Deployed(address,filename,contractObj,dat) VALUES (?,?,?,?)', entry)
         self.conn.commit()
@@ -191,7 +204,8 @@ class Infura(Connection):
     def call(self, contractAddress, methodName, *arg, price=4, value=0):
         '''
         Broadcasts a method call transaction to the network.
-        :param contractAddress: Hex (string) address of a contract deployed through Nim.
+        :param contractAddress: HexString address of a contract deployed through Nim.
+        #TODO: Let people load their own abi ?
         :param methodName: (string)
         :param arg: Respective arguments for the method
         :param price: (unsigned int) price in gwei for gas
@@ -219,10 +233,9 @@ class Infura(Connection):
             pass
         else:
             txn['value'] = Web3.toWei(value, 'ether')
-        #print(txn)
         signObj = self.web3.eth.account.signTransaction(txn, self.key.getPrivate())
         txnHash = byte32(self.web3.eth.sendRawTransaction(signObj.rawTransaction))
 
 
-        return (func(*arg).call(),self.__wait_for_receipt(txnHash, 10))
+        return (func(*arg).call(),self.wait_for_receipt(txnHash, 10))
 
