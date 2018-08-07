@@ -23,7 +23,7 @@ class Check:
         These will probably replace the sample receiverPays.sol .
         '''
         self.address = self.connection.deploy('receiverPays.sol',value=amount)
-        print(self.address)
+        print('Contract Address: '+self.address)
     def __signCheck(self, recipient, amount, nonce, contractAddress):
         amount = Web3.toWei(amount,'ether')
         hash = sha3(["address", "uint256", "uint256", "address"], [recipient, amount, nonce, contractAddress])
@@ -41,7 +41,7 @@ class Check:
     def kill(self):
         '''
         Must be contract creator.
-        :return:
+        Executes contract termination
         '''
         self.connection.call(self.address,'kill')
 

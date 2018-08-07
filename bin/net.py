@@ -236,6 +236,5 @@ class Infura(Connection):
         signObj = self.web3.eth.account.signTransaction(txn, self.key.getPrivate())
         txnHash = byte32(self.web3.eth.sendRawTransaction(signObj.rawTransaction))
 
-
         return (func(*arg).call(),self.wait_for_receipt(txnHash, 10))
 
