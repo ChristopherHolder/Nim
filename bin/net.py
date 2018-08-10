@@ -84,8 +84,10 @@ class Connection:
         :param path: Path to keyfile.
         :param passphrase: Decrypts keyfile.
         :return: Decrypts keyfile(JSON) with passphrase.
+        TODO: Handle exceptions better here.
         '''
-        self.web3.eth.enable_unaudited_features()
+        #Deprecated
+        #self.web3.eth.enable_unaudited_features()
         self.key.load(path)
         self.key.decrypt(passphrase)
         self.address = self.key.address
@@ -151,7 +153,6 @@ class Infura(Connection):
         :param price: Price of gas
         :return: Receipt of the transaction.
         '''
-
         # Gas estimation also depends on the specified ethereum network
         nonce = self.web3.eth.getTransactionCount(self.key.address)
         gas = self.web3.eth.estimateGas({'to': to, 'from': self.key.address, 'value': Web3.toWei(value, 'ether')})
@@ -182,16 +183,13 @@ class Infura(Connection):
         contract = self.web3.eth.contract(abi=abi, bytecode=bin)
         nonce = self.web3.eth.getTransactionCount(self.key.address)
         if arg == None:
-            txn = contract.constructor().buildTransaction({'gasPrice': Web3.toWei(price, 'gwei')})
+            txn = contract.constructor().buildTransaction({'gasPrice': Web3.toWei(price, 'gwei'),'value':Web3.toWei(value, 'ether')})
         else:
-            txn = contract.constructor(*arg).buildTransaction({'gasPrice': Web3.toWei(price, 'gwei')})
+            txn = contract.constructor(*arg).buildTransaction({'gasPrice': Web3.toWei(price, 'gwei'),'value':Web3.toWei(value, 'ether')})
         txn['nonce'] = nonce
-        if value == 0:
-            pass
-        else:
-            txn['value'] = Web3.toWei(value, 'ether')
         txn['chainId']= netIds[self.network]
         print(txn)
+        print('Cost of transaction : ' + str( self.web3.fromWei(txn['gasPrice'] * txn['gas'] + txn['value'],'ether')  )  )
         self.web3.eth.enable_unaudited_features()
         signObj = self.web3.eth.account.signTransaction(txn, self.key.getPrivate())
         txnHash = byte32(self.web3.eth.sendRawTransaction(signObj.rawTransaction))
@@ -223,7 +221,7 @@ class Infura(Connection):
             print('Method not in contract')
             return False
         if methodName == 'fallback':
-            func = contract.functions.fallback()
+            func = contract.functions.fallback
         else:
             func = contract.functions.__dict__[methodName]
         txn = func(*arg).buildTransaction({'nonce': self.web3.eth.getTransactionCount(self.key.address)})

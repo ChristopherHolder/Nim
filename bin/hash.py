@@ -5,7 +5,8 @@ of tools in dealing with private and public key operations.
 
 eth_account - useful for key operations and account encryption without running an ethereum node.
 """
-#TODO: Use eth_account to provide a safer way to treat private keys.
+#TODO: Use eth_account in a more specialized way to provide a safer way to treat private keys.
+#TODO: Change byte32 into a decorator.
 
 from eth_account import Account
 from eth_account.messages import defunct_hash_message
