@@ -27,7 +27,7 @@ class Check:
     def __signCheck(self, recipient, amount, nonce, contractAddress):
         amount = Web3.toWei(amount,'ether')
         hash = sha3(["address", "uint256", "uint256", "address"], [recipient, amount, nonce, contractAddress])
-        return {'signature':self.connection.signMsg(hash).signature,'nonce':nonce,'amount':amount,'address':contractAddress}
+        return {'signature':byte32(self.connection.signMsg(hash).signature),'nonce':nonce,'amount':amount,'address':contractAddress}
 
     def write(self,recipient,amount):
         self.__deploy(amount)

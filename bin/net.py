@@ -56,10 +56,11 @@ class Connection:
             logging.error('Connection Error')
             return False
         else:
-            print('...Connection established with the ' + self.network + ' Ethereum network')
+            #print('...Connection established with the ' + self.network + ' Ethereum network')
             logging.info('...Connection established with the ' + self.network + ' Ethereum network')
             if self.web3.isConnected():
-                print('...Active connection at : ' + self.time)
+                #print('...Active connection at : ' + self.time)
+                logging.info('...Active connection at : ' + self.time)
                 self.running = True
                 return True
 
@@ -101,9 +102,11 @@ class Connection:
         while True:
             tx_receipt = self.web3.eth.getTransactionReceipt(tx_hash)
             if tx_receipt:
-                print('Transaction mined.')
+                #print('Transaction mined.')
+                logging.info('..Transaction mined.')
                 return tx_receipt
-            print('...Pending')
+            #print('...Pending')
+            logging.info('...Pending')
             time.sleep(poll_interval)
     def signStr(self,s):
         '''
@@ -182,15 +185,15 @@ class Infura(Connection):
         bin, abi = contract_interface['bin'], contract_interface['abi']
         contract = self.web3.eth.contract(abi=abi, bytecode=bin)
         nonce = self.web3.eth.getTransactionCount(self.key.address)
+        trans ={'gasPrice': Web3.toWei(price, 'gwei'),'value':Web3.toWei(value, 'ether'),
+                'nonce':nonce,'chainId':netIds[self.network]}
         if arg == None:
-            txn = contract.constructor().buildTransaction({'gasPrice': Web3.toWei(price, 'gwei'),'value':Web3.toWei(value, 'ether')})
+            txn = contract.constructor().buildTransaction(trans)
         else:
-            txn = contract.constructor(*arg).buildTransaction({'gasPrice': Web3.toWei(price, 'gwei'),'value':Web3.toWei(value, 'ether')})
-        txn['nonce'] = nonce
-        txn['chainId']= netIds[self.network]
+            txn = contract.constructor(*arg).buildTransaction(trans)
         print(txn)
         print('Cost of transaction : ' + str( self.web3.fromWei(txn['gasPrice'] * txn['gas'] + txn['value'],'ether')  )  )
-        self.web3.eth.enable_unaudited_features()
+        #self.web3.eth.enable_unaudited_features()
         signObj = self.web3.eth.account.signTransaction(txn, self.key.getPrivate())
         txnHash = byte32(self.web3.eth.sendRawTransaction(signObj.rawTransaction))
         address = self.wait_for_receipt(txnHash, 10)['contractAddress']
