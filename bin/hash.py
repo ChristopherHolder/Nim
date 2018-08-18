@@ -86,7 +86,7 @@ def decode(hexMsg,hexSig):
     v, hex_r, hex_s = Web3.toInt(sig[-1]), Web3.toHex(sig[:32]), Web3.toHex(sig[32:64])
     return (hexMsgHash,v,hex_r,hex_s)
 
-def sha3(types,values):
+def soliditySha3(types,values):
     '''
     :param types: list of solidity types(strings)
     :param values: list of values to hash (solidity primitives)

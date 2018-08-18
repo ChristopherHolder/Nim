@@ -1,15 +1,17 @@
-#Runs infraestructure and connection tests.
+'''
+    test-py - runs infraestructure and connection tests.
+'''
 
 import sys
-import time
-import timeit
 import unittest
 import logging
+import time
 
 sys.path.insert(0,'../bin')
 
 from net import Infura
-from nim import Check
+from verifier import Check
+
 solpath = '/home/abzu/PycharmProjects/Nim/res/solidity/'
 token = 'n9LBfW1SzRzIjZfK5MfC'
 path = '/home/abzu/.ethereum/rinkeby/keystore/UTC--2018-06-29T15-24-00.421088464Z--7f039dee9c7d69db4009089d60b0eb5f355c3a81'
@@ -19,83 +21,112 @@ testType = 'fast'
 
 class InfuraTest(unittest.TestCase):
     def setUp(self):
-        logging.info('')
-        self.connectionA = Infura('rinkeby',token)
-        self.connectionB = Infura('rinkeby',token)
-        self.bal = self.connectionA.getBalance
-        self.assertTrue(self.connectionA.run())
-        self.assertTrue(self.connectionB.run())
-        self.connectionA.decryptKey(path, 'hola123')
-        self.connectionB.decryptKey(path2,'hola123')
-        self.assertTrue(not self.connectionA.isLock())
-        self.assertTrue(not self.connectionB.isLock())
+        self.A = Infura('rinkeby', token)
+        self.B = Infura('rinkeby', token)
+        self.assertTrue(self.A.run())
+        self.assertTrue(self.B.run())
+        self.A.decryptKey(path, 'hola123')
+        self.B.decryptKey(path2, 'hola123')
+        self.assertTrue(not self.A.isLock())
+        self.assertTrue(not self.B.isLock())
 
     def test_hash(self):
+        logging.info('...Testing hashing capabilities.')
         str = 'this is a test'
-        sign = self.connectionA.signStr(str)
-        self.assertEqual(self.connectionA.address,self.connectionA.whoSign(sign.messageHash,sign.signature))
+        sign = self.A.signStr(str)
+        self.assertEqual(self.A.address, self.A.whoSign(sign.messageHash, sign.signature))
 
     @unittest.skipIf(testType == 'fast','Reduces Ether in account and is slow.')
     def test_send(self):
-        amount = 0.1
-        balA = self.bal(self.connectionA.address)
-        balB = self.bal(self.connectionB.address)
-        self.connectionA.send(self.connectionB.address,amount)
-        balA2 = self.bal(self.connectionA.address)
-        balB2 = self.bal(self.connectionB.address)
+        logging.info('...Testing ether transactions.')
+        amount = 0.2
+        balA = self.A.getBalance()
+        balB = self.B.getBalance()
+        self.A.send(self.B.address, amount)
+        time.sleep(2)
+        balA2 = self.A.getBalance()
+        balB2 = self.B.getBalance()
         self.assertTrue((float(balA2) + amount) < balA)
         self.assertTrue(balB2 > balB)
+        print()
 
     @unittest.skipIf(testType == 'fast','Reduces Ether in account and is slow.')
     def test_deploy(self):
         #Checks that a contract can be deployed, tests whether a value can be attached.
-
-        balA = self.bal(self.connectionA.address)
-        print('A: ' + str(balA) + ' ' + self.connectionA.address)
-        address = self.connectionA.deploy('greeter.sol','hi',value=0.15)
-        balA2 = self.bal(self.connectionA.address)
-        print('A: ' + str(balA2) + ' ' + self.connectionA.address)
+        print('...Testing contract deployment capabilities.')
+        balA = self.A.getBalance()
+        time.sleep(2)
+        print('A: ' + str(balA) + ' ' + self.A.address)
+        address = self.A.deploy('greeter.sol', 'hi', value=0.15)
+        print('A deployed contract at ' + address)
+        time.sleep(2)
+        balA2 = self.A.getBalance()
+        time.sleep(2)
+        print('A: ' + str(balA2) + ' ' + self.A.address)
         self.assertTrue(type(address) == str)
         self.assertTrue((float(balA2) + 0.15) < balA)
-
-    @unittest.skipIf(testType == 'fast', 'Reduces Ether in account and is slow.')
+        print()
+    #@unittest.skipIf(testType == 'fast', 'Reduces Ether in account and is slow.')
     def test_methods(self):
-        balA = self.bal(self.connectionA.address)
-        balB = self.bal(self.connectionB.address)
-        print('A: ' + str(balA) + ' ' + self.connectionA.address)
-        print('B: ' + str(balB) + ' ' + self.connectionB.address)
-        address = self.connectionA.deploy('test.sol','hola',5,value=0.2)
-        balA2 = self.bal(self.connectionA.address)
-        print('A deployed contract ' + str(balA) + ' ' + self.connectionA.address)
+        print('...Testing contract methods.')
+        time.sleep(3)
+        balA = self.A.getBalance()
+        time.sleep(2)
+        balB = self.B.getBalance()
+        time.sleep(2)
+        print('A: ' + str(balA) + ' ' + self.A.address)
+        print('B: ' + str(balB) + ' ' + self.B.address)
+        address = self.A.deploy('test.sol', 'hola', 5, value=0.2)
+        time.sleep(3)
+        balA2 = self.A.getBalance()
+        time.sleep(2)
+        print('A: ' + str(balA) + ' ' + self.A.address)
+        time.sleep(2)
+        print('A deployed contract at '+ address)
         self.assertTrue(float(balA2) + 0.2 < balA)
-        self.connectionB.call(address,'getBalance')
-        balB2 = self.bal(self.connectionB.address)
-        print('B called getBalance' + str(balB2) + ' ' + self.connectionB.address)
-        self.assertTrue(float(balB2) > balB)
-
-    @unittest.expectedFailure
+        self.B.call(address, 'getBalance')
+        time.sleep(3)
+        balB2 = self.B.getBalance()
+        print('B called getBalance')
+        self.assertTrue((float(balB2) + 0.2) > balB)
+        print('A: ' + str(balA2) + ' ' + self.A.address)
+        print('B: ' + str(balB2) + ' ' + self.B.address)
+        print()
+    @unittest.skip('Feature not ready for implementation')
     def test_check(self):
-        check = Check(self.connectionA)
-        check2 = Check(self.connectionB)
-        checkAmount  = 0.2
-        balA = self.bal(self.connectionA.address)
-        balB = self.bal(self.connectionB.address)
-        print('A: ' + str(balA) + ' ' + self.connectionA.address)
-        print('B: ' + str(balB) + ' ' + self.connectionB.address)
-        slip = check.write(self.connectionB.address,checkAmount)
+        check = Check(self.A)
+        print(check.connection.__dict__)
+        balA = self.A.getBalance()
+        check2 = Check(self.B)
+        slip = check.write(self.B.address, 0.2)
+        balA2 = self.A.getBalance()
+        self.assertTrue(balA2 < balA)
+        balB = self.B.getBalance()
         print(slip)
-        check2.claimPayment(slip['address'],slip['amount'],slip['nonce'],slip['signature'])
-        balA2 = self.bal(self.connectionA.address)
-        balB2 = self.bal(self.connectionB.address)
-        #time.sleep(130)
-        #Check that contract deployment transaction reduces available ether.
-        #self.assertTrue(float(balA2) + checkAmount < balA)
-
-        #Check that new account has received the ether deployed by the check contract
-        #self.assertTrue(balB2 > balB)
-        print('A: ' + str(balA2) + ' ' + self.connectionA.address)
-        print('B: ' + str(balB2) + ' ' + self.connectionB.address)
+        check2.claimPayment(slip['address'],slip['amount'],slip['nonce'],slip['signHexStr'])
+        balB2 = self.B.getBalance()
+        print(str(balB2) + ' > ' + str(balB) + '?')
+        print(balB2 > balB)
+        self.assertTrue(balB2 > balB)
 
 
 if __name__ == '__main__':
-    unittest.main()
+    #unittest.main()
+    A = Infura('rinkeby',token)
+    B = Infura('rinkeby',token)
+    A.decryptKey(path, 'hola123')
+    B.decryptKey(path2,'hola123')
+    A.run()
+    B.run()
+    print('A: ' + str(A.getBalance()))
+    print('B: ' + str(B.getBalance()))
+    address = A.deploy('test.sol','a',4,value=0.1)
+    time.sleep(10)
+    print('A.deploy(\'test.sol\',\'a\',4,value=0.1)')
+    print('A: ' + str(A.getBalance()))
+    print('B: ' + str(B.getBalance()))
+    B.call(address,'getBalance')
+    print('B.call(address,\'getBalance\')')
+    time.sleep(5)
+    print('A: ' + str(A.getBalance()))
+    print('B: ' + str(B.getBalance()))

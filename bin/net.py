@@ -25,6 +25,7 @@ netIds = {'main':1,'morden':2,'ropsten':3,'rinkeby':4,'kovan':42,'sokol':77,'cor
 #TODO: Create custom exceptions.
 #TODO: Add appropiate gas price recalculation. Connecting to eth gas station.
 
+#TODO: Time in between waiting for server to response.
 
 class Connection:
     '''
@@ -102,11 +103,9 @@ class Connection:
         while True:
             tx_receipt = self.web3.eth.getTransactionReceipt(tx_hash)
             if tx_receipt:
-                #print('Transaction mined.')
-                logging.info('..Transaction mined.')
+                print('...Transaction mined.')
                 return tx_receipt
-            #print('...Pending')
-            logging.info('...Pending')
+            print('...Pending Transaction')
             time.sleep(poll_interval)
     def signStr(self,s):
         '''
@@ -130,8 +129,8 @@ class Connection:
         '''
         return self.web3.eth.account.recoverHash(msgHash, signature=signature)
 
-    def getBalance(self,address):
-        return self.web3.fromWei(self.web3.eth.getBalance(address), 'ether')
+    def getBalance(self):
+        return self.web3.fromWei(self.web3.eth.getBalance(self.address), 'ether')
 
     def searchContract(self,filename):
         self.c.execute('SELECT address FROM Deployed WHERE filename = ? ORDER BY dat DESC',(filename,))
@@ -163,9 +162,14 @@ class Infura(Connection):
                 'gas': gas,'gasPrice': Web3.toWei(price, 'gwei'),
                 'nonce': nonce,'chainId': netIds[self.network]}
 
-        self.web3.eth.enable_unaudited_features()
+        #self.web3.eth.enable_unaudited_features()
         signObj = self.web3.eth.account.signTransaction(trans, self.key.getPrivate())
-        return self.wait_for_receipt(byte32(self.web3.eth.sendRawTransaction(signObj.rawTransaction)), 10)
+        try:
+            txnHash = self.web3.eth.sendRawTransaction(signObj.rawTransaction)
+        except ValueError as e:
+            print(e + ' ' + str(type(e)))
+        else:
+            return self.wait_for_receipt(byte32(txnHash), 10)
 
 
     def deploy(self, path, *arg, price=2, value=0):
@@ -191,12 +195,20 @@ class Infura(Connection):
             txn = contract.constructor().buildTransaction(trans)
         else:
             txn = contract.constructor(*arg).buildTransaction(trans)
-        print(txn)
-        print('Cost of transaction : ' + str( self.web3.fromWei(txn['gasPrice'] * txn['gas'] + txn['value'],'ether')  )  )
+
+        print('Cost of deployment: ' + str( self.web3.fromWei(txn['gasPrice'] * txn['gas'] + txn['value'],'ether')  ) +' ETH' )
         #self.web3.eth.enable_unaudited_features()
         signObj = self.web3.eth.account.signTransaction(txn, self.key.getPrivate())
-        txnHash = byte32(self.web3.eth.sendRawTransaction(signObj.rawTransaction))
+
+        try:
+            txnHash = self.web3.eth.sendRawTransaction(signObj.rawTransaction)
+        except ValueError as e:
+            print(e + ' ' + str(type(e)))
+
+        txnHash = byte32(txnHash)
+
         address = self.wait_for_receipt(txnHash, 10)['contractAddress']
+
         entry = (address, solname, blob,datetime.datetime.now())
         self.c.execute('INSERT INTO Deployed(address,filename,contractObj,dat) VALUES (?,?,?,?)', entry)
         self.conn.commit()
@@ -234,8 +246,13 @@ class Infura(Connection):
             pass
         else:
             txn['value'] = Web3.toWei(value, 'ether')
+        print('Cost of method calling : ' + str(self.web3.fromWei(txn['gasPrice'] * txn['gas'] + txn['value'], 'ether')) + ' ETH')
         signObj = self.web3.eth.account.signTransaction(txn, self.key.getPrivate())
-        txnHash = byte32(self.web3.eth.sendRawTransaction(signObj.rawTransaction))
 
-        return (func(*arg).call(),self.wait_for_receipt(txnHash, 10))
+        try:
+            txnHash = byte32(self.web3.eth.sendRawTransaction(signObj.rawTransaction))
+        except ValueError as e:
+            print(e + ' ' + str(type(e)))
+        else:
+            return (func(*arg).call(),self.wait_for_receipt(txnHash, 10))
 
