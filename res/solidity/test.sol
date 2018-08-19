@@ -1,12 +1,8 @@
 pragma solidity ^0.4.0;
 
-contract Check{
-    address deployer;
-
-    mapping(uint8 => bool) ids;
+contract Test{
 
     constructor(string n, uint8 k) payable {
-        deployer = msg.sender;
     }
 
     function getBalance() public {

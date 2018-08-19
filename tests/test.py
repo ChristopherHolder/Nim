@@ -6,6 +6,7 @@ import sys
 import unittest
 import logging
 import time
+import pprint
 
 sys.path.insert(0,'../bin')
 
@@ -36,12 +37,14 @@ class InfuraTest(unittest.TestCase):
         sign = self.A.signStr(str)
         self.assertEqual(self.A.address, self.A.whoSign(sign.messageHash, sign.signature))
 
-    @unittest.skipIf(testType == 'fast','Reduces Ether in account and is slow.')
+    #@unittest.skipIf(testType == 'fast','Reduces Ether in account and is slow.')
     def test_send(self):
         logging.info('...Testing ether transactions.')
         amount = 0.2
         balA = self.A.getBalance()
+        time.sleep(2)
         balB = self.B.getBalance()
+        time.sleep(2)
         self.A.send(self.B.address, amount)
         time.sleep(2)
         balA2 = self.A.getBalance()
@@ -50,7 +53,7 @@ class InfuraTest(unittest.TestCase):
         self.assertTrue(balB2 > balB)
         print()
 
-    @unittest.skipIf(testType == 'fast','Reduces Ether in account and is slow.')
+    #@unittest.skipIf(testType == 'fast','Reduces Ether in account and is slow.')
     def test_deploy(self):
         #Checks that a contract can be deployed, tests whether a value can be attached.
         print('...Testing contract deployment capabilities.')
@@ -69,7 +72,7 @@ class InfuraTest(unittest.TestCase):
     #@unittest.skipIf(testType == 'fast', 'Reduces Ether in account and is slow.')
     def test_methods(self):
         print('...Testing contract methods.')
-        time.sleep(3)
+        time.sleep(2)
         balA = self.A.getBalance()
         time.sleep(2)
         balB = self.B.getBalance()
@@ -85,7 +88,7 @@ class InfuraTest(unittest.TestCase):
         print('A deployed contract at '+ address)
         self.assertTrue(float(balA2) + 0.2 < balA)
         self.B.call(address, 'getBalance')
-        time.sleep(3)
+        time.sleep(2)
         balB2 = self.B.getBalance()
         print('B called getBalance')
         self.assertTrue((float(balB2) + 0.2) > balB)
@@ -111,7 +114,9 @@ class InfuraTest(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    #unittest.main()
+
+    unittest.main()
+    '''
     A = Infura('rinkeby',token)
     B = Infura('rinkeby',token)
     A.decryptKey(path, 'hola123')
@@ -125,8 +130,11 @@ if __name__ == '__main__':
     print('A.deploy(\'test.sol\',\'a\',4,value=0.1)')
     print('A: ' + str(A.getBalance()))
     print('B: ' + str(B.getBalance()))
-    B.call(address,'getBalance')
+    c = B.call(address,'getBalance')
     print('B.call(address,\'getBalance\')')
+    print('Result of call ' + str(c[0]))
+    pprint.pprint(c[1])
     time.sleep(5)
     print('A: ' + str(A.getBalance()))
     print('B: ' + str(B.getBalance()))
+    '''

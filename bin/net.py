@@ -47,14 +47,15 @@ class Connection:
     def __call__(self, *args, **kwargs):
         try:
             if self.type == 'infura':
-                self.web3 = Web3(HTTPProvider('https://' + self.network + '.infura.io/' + self.token))
+                self.web3 = Web3(HTTPProvider('https://' + self.network + '.infura.io/v3' + self.token))
                 if self.network == 'rinkeby':
                     self.web3.middleware_stack.inject(geth_poa_middleware, layer=0)
             elif self.type == 'local' or self.type =='ipc':
+                #Default location for geth.
                 self.web3 = Web3(IPCProvider())
             self.time = time.asctime(time.localtime())
         except:
-            logging.error('Connection Error')
+            print('Connection Error')
             return False
         else:
             #print('...Connection established with the ' + self.network + ' Ethereum network')
