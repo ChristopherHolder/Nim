@@ -1,34 +1,31 @@
 pragma solidity ^0.4.20;
 
-contract ReceiverPays {
-    address owner = msg.sender;
-
+contract Test2 {
+    address public owner;
     mapping(uint256 => bool) usedNonces;
-
-    // Funds are sent at deployment time.
-    function ReceiverPays() public payable { }
-
-
-    function claimPayment(uint256 amount, uint256 nonce, bytes sig) public {
+    event E(bytes32 l);
+    constructor() public payable {
+        owner = msg.sender;
+    }
+    function claimPayment(uint256 amount, uint256 nonce, bytes sig) public
+     returns(bytes32,bytes32)
+     {
         require(!usedNonces[nonce]);
         usedNonces[nonce] = true;
 
-        // This recreates the message that was signed on the client.
+        //This recreates the message that was signed on the client.
         bytes32 message = prefixed(keccak256(msg.sender, amount, nonce, this));
-
-        require(recoverSigner(message, sig) == owner);
+        //emit E(message);
+        //require(recoverSigner(message, sig) == owner);
 
         msg.sender.transfer(amount);
+        return (keccak256(msg.sender, amount, nonce, this),message);
     }
 
-    // Destroy contract and reclaim leftover funds.
     function kill() public {
         require(msg.sender == owner);
         selfdestruct(msg.sender);
     }
-
-
-    // Signature methods
 
     function splitSignature(bytes sig)
         internal

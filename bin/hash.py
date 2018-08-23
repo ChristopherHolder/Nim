@@ -51,13 +51,15 @@ class Key:
         if self.lock == False:
             return self.__privateKey
 
-def hash(msg):
+def hashStr(msg):
     '''
     Hash compatible with web.eth.sign() method.
     :param msg:
     :return:
     '''
     return defunct_hash_message(text=msg)
+def hashBytes(n):
+    return  defunct_hash_message(n)
 def byte32(val):
     return Web3.toHex(Web3.toBytes(val).rjust(32, b'\0'))
 
@@ -85,11 +87,17 @@ def decode(hexMsg,hexSig):
     sig = Web3.toBytes(hexstr=hexSig)
     v, hex_r, hex_s = Web3.toInt(sig[-1]), Web3.toHex(sig[:32]), Web3.toHex(sig[32:64])
     return (hexMsgHash,v,hex_r,hex_s)
-
+def sha3(types,values):
+    '''
+        :param types: list of solidity types(strings)
+        :param values: list of values to hash (solidity primitives)
+        :return:
+        '''
+    return Web3.sha3(types, values)
 def soliditySha3(types,values):
     '''
     :param types: list of solidity types(strings)
     :param values: list of values to hash (solidity primitives)
     :return:
     '''
-    return byte32(Web3.soliditySha3(types,values))
+    return Web3.soliditySha3(types,values)

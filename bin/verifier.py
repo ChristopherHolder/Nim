@@ -1,38 +1,43 @@
 #Not meant to be used. Not complete.
 
-from hash import soliditySha3,byte32
-from web3 import Web3
-
-import json
 import random
-import sqlite3
+
+from hash import soliditySha3,sha3,byte32
+from web3 import Web3
 
 class Check:
     def __init__(self,connection):
         if connection.isRunning() and not connection.isLock():
             self.connection = connection
-    def __deploy(self,amount):
-        '''
-        As more optimized versions of the cheque contract are created.
-        These will probably replace the sample receiverPays.sol .
-        '''
-        self.address = self.connection.deploy('receiverPays.sol',value=amount)
-        print('Contract Address: '+self.address)
-    def __signCheck(self, recipient, amount, nonce, contractAddress):
+    def signCheck(self, recipient, amount, nonce, contractAddress):
         amount = Web3.toWei(amount,'ether')
         hash = soliditySha3(["address", "uint256", "uint256", "address"], [recipient, amount, nonce, contractAddress])
-        return {'signHexBytes':self.connection.signMsg(hash).signature,
-                'signHexStr':byte32(self.connection.signMsg(hash).signature),
-                'nonce':nonce,'amount':amount,'address':contractAddress}
+        return {'signHexBytes':self.connection.signHash(hash).signature,
+                'signHexStr':Web3.toHex(self.connection.signHash(hash).signature),
+                'nonce':nonce, 'amount':amount, 'address':contractAddress, 'hash': hash}
 
     def write(self,recipient,amount):
-        self.__deploy(amount)
+        '''
+            As more optimized versions of the cheque contract are created.
+            These will probably replace the programtheblockchain.com test2.sol
+            example.
+        '''
+        address = self.connection.deploy('test2.sol',price=4, value=amount)
+        print('Check deployed at: ' + address)
         nonce = random.randrange(1,100000)
-        return self.__signCheck(recipient,amount,nonce,self.address)
+        return self.signCheck(recipient,amount,nonce,address)
 
     def claimPayment(self,address,amount,nonce,signature):
+        '''
+
+        :param address:
+        :param amount:
+        :param nonce:
+        :param signature:
+        :return:
+        '''
         receipt = self.connection.call(address,'claimPayment',amount,nonce,signature)
-        print(receipt[1])
+        return receipt[0]
 
     def kill(self):
         '''
@@ -41,25 +46,3 @@ class Check:
         '''
         self.connection.call(self.address,'kill')
 
-def notUnitTest():
-    '''
-        connectionA = Infura('rinkeby', token)
-        connectionA.run()
-        connectionB = Infura('rinkeby', token)
-        connectionB.run()
-        bal = connectionA.getBalance
-        connectionA.decryptKey(path, 'hola123')
-        connectionB.decryptKey(path2, 'hola123')
-        check = Check(connectionA)
-        balA = bal(connectionA.address)
-        check2 = Check(connectionB)
-        slip = check.write(connectionB.address, 0.2)
-        balA2 = bal(connectionA.address)
-        print(balA2 < balA)
-        balB = bal(connectionB.address)
-        print(slip)
-        connectionB.call(slip['address'],'kill')
-        balB2 = bal(connectionB.address)
-        print(str(balB2) + ' > '+ str(balB) + '?' )
-        print(balB2 > balB)
-        '''

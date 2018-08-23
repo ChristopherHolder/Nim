@@ -12,7 +12,7 @@ import logging
 from solc import compile_source
 from web3 import Web3,HTTPProvider,IPCProvider,middleware
 from web3.middleware import geth_poa_middleware
-from hash import Key,byte32,hash
+from hash import Key,byte32,hashBytes,hashStr
 
 
 solpath = '/home/abzu/PycharmProjects/Nim/res/solidity/'
@@ -47,7 +47,7 @@ class Connection:
     def __call__(self, *args, **kwargs):
         try:
             if self.type == 'infura':
-                self.web3 = Web3(HTTPProvider('https://' + self.network + '.infura.io/v3' + self.token))
+                self.web3 = Web3(HTTPProvider('https://' + self.network + '.infura.io/v3/' + self.token))
                 if self.network == 'rinkeby':
                     self.web3.middleware_stack.inject(geth_poa_middleware, layer=0)
             elif self.type == 'local' or self.type =='ipc':
@@ -113,9 +113,9 @@ class Connection:
         :param s: String
         :return: Signature object of s
         '''
-        return self.web3.eth.account.signHash(hash(s), private_key=self.key.getPrivate())
+        return self.web3.eth.account.signHash(hashStr(s), private_key=self.key.getPrivate())
 
-    def signMsg(self,msgHash):
+    def signHash(self,msgHash):
         '''
         :param msgHash:
         :return: Signature object of the message hash.
@@ -191,7 +191,7 @@ class Infura(Connection):
         contract = self.web3.eth.contract(abi=abi, bytecode=bin)
         nonce = self.web3.eth.getTransactionCount(self.key.address)
         trans ={'gasPrice': Web3.toWei(price, 'gwei'),'value':Web3.toWei(value, 'ether'),
-                'nonce':nonce,'chainId':netIds[self.network]}
+                'nonce':nonce,'chainId':netIds[self.network],'from':self.address}
         if arg == None:
             txn = contract.constructor().buildTransaction(trans)
         else:
@@ -199,12 +199,13 @@ class Infura(Connection):
 
         print('Cost of deployment: ' + str( self.web3.fromWei(txn['gasPrice'] * txn['gas'] + txn['value'],'ether')  ) +' ETH' )
         #self.web3.eth.enable_unaudited_features()
+        print(txn)
         signObj = self.web3.eth.account.signTransaction(txn, self.key.getPrivate())
 
         try:
             txnHash = self.web3.eth.sendRawTransaction(signObj.rawTransaction)
         except ValueError as e:
-            print(e + ' ' + str(type(e)))
+            print(type(e.args[0]))
 
         txnHash = byte32(txnHash)
 
@@ -224,7 +225,7 @@ class Infura(Connection):
         :param arg: Respective arguments for the method
         :param price: (unsigned int) price in gwei for gas
         :param value: (ether)value for the transaction in ether.
-        :return: tuple with locally calculated return value at [0] and transaction receipt at [1] for the method.
+        :return: tuple with locally calculated return value at [0] and transaction receipt at [1].
         '''
         self.c.execute('SELECT contractObj FROM Deployed WHERE address = ?', (contractAddress,))
         data = self.c.fetchone()
@@ -240,20 +241,32 @@ class Infura(Connection):
             func = contract.functions.fallback
         else:
             func = contract.functions.__dict__[methodName]
-        txn = func(*arg).buildTransaction({'nonce': self.web3.eth.getTransactionCount(self.key.address)})
-        txn['gasPrice'] = Web3.toWei(price, 'gwei')
-        txn['chainId'] = netIds[self.network]
-        if value == 0:
-            pass
-        else:
-            txn['value'] = Web3.toWei(value, 'ether')
-        print('Cost of method calling : ' + str(self.web3.fromWei(txn['gasPrice'] * txn['gas'] + txn['value'], 'ether')) + ' ETH')
-        signObj = self.web3.eth.account.signTransaction(txn, self.key.getPrivate())
 
-        try:
-            txnHash = byte32(self.web3.eth.sendRawTransaction(signObj.rawTransaction))
-        except ValueError as e:
-            print(e + ' ' + str(type(e)))
-        else:
-            return (func(*arg).call(),self.wait_for_receipt(txnHash, 10))
+        counter = 0
+        b = True
+        while True:
+            try:
+                counter += 1
+                nonce = self.web3.eth.getTransactionCount(self.key.address)
+                trans = {'gasPrice': Web3.toWei(price, 'gwei'), 'value': Web3.toWei(value, 'ether'),
+                         'nonce': nonce, 'chainId': netIds[self.network],'from':self.address,'gas':90000}
+                txn = func(*arg).buildTransaction(trans)
+                print(txn)
+
+            except ValueError as e:
+                print('Error in transaction building')
+
+                if e.args[0]['message'] == 'gas required exceeds allowance or always failing transaction':
+                    print('Manually assigning gas: ')
+                    trans['gas'] += 10000
+
+            else:
+                print('Cost of method calling : ' + str(self.web3.fromWei(txn['gasPrice'] * txn['gas'] + txn['value'], 'ether')) + ' ETH')
+                signObj = self.web3.eth.account.signTransaction(txn, self.key.getPrivate())
+                txnHash = byte32(self.web3.eth.sendRawTransaction(signObj.rawTransaction))
+                return (func(*arg).call(), self.wait_for_receipt(txnHash, 10))
+
+
+
+
 
