@@ -1,4 +1,5 @@
 """
+Author: Christopher Holder
 eth.py - Manages the connections between the Ethereum Node and the program through
 a Web3py wrapper.
 """
@@ -76,8 +77,10 @@ class Connection:
     #Loads key from given path
     def isLock(self):
         return self.lock
+
     def isRunning(self):
         return self.running
+
     def loadKey(self,path):
         self.web3.eth.enable_unaudited_features()
         self.key.load(path)
@@ -108,11 +111,13 @@ class Connection:
                 return tx_receipt
             print('...Pending Transaction')
             time.sleep(poll_interval)
+
     def signStr(self,s):
         '''
         :param s: String
         :return: Signature object of s
         '''
+        #TODO: Review correct hashing.
         return self.web3.eth.account.signHash(hashStr(s), private_key=self.key.getPrivate())
 
     def signHash(self,msgHash):
@@ -190,6 +195,7 @@ class Infura(Connection):
         bin, abi = contract_interface['bin'], contract_interface['abi']
         contract = self.web3.eth.contract(abi=abi, bytecode=bin)
         nonce = self.web3.eth.getTransactionCount(self.key.address)
+
         trans ={'gasPrice': Web3.toWei(price, 'gwei'),'value':Web3.toWei(value, 'ether'),
                 'nonce':nonce,'chainId':netIds[self.network],'from':self.address}
         if arg == None:
@@ -198,8 +204,7 @@ class Infura(Connection):
             txn = contract.constructor(*arg).buildTransaction(trans)
 
         print('Cost of deployment: ' + str( self.web3.fromWei(txn['gasPrice'] * txn['gas'] + txn['value'],'ether')  ) +' ETH' )
-        #self.web3.eth.enable_unaudited_features()
-        print(txn)
+
         signObj = self.web3.eth.account.signTransaction(txn, self.key.getPrivate())
 
         try:
@@ -234,6 +239,7 @@ class Infura(Connection):
             return False
         interface = pickle.loads(data[0])
         contract = self.web3.eth.contract(abi=interface['abi'], bytecode=interface['bin'], address=contractAddress)
+        #print(contract.functions.__dict__.keys())
         if methodName not in contract.functions.__dict__.keys():
             print('Method not in contract')
             return False
@@ -251,15 +257,15 @@ class Infura(Connection):
                 trans = {'gasPrice': Web3.toWei(price, 'gwei'), 'value': Web3.toWei(value, 'ether'),
                          'nonce': nonce, 'chainId': netIds[self.network],'from':self.address,'gas':90000}
                 txn = func(*arg).buildTransaction(trans)
-                print(txn)
+                #print(txn)
 
             except ValueError as e:
                 print('Error in transaction building')
-
+                '''
                 if e.args[0]['message'] == 'gas required exceeds allowance or always failing transaction':
                     print('Manually assigning gas: ')
                     trans['gas'] += 10000
-
+                '''
             else:
                 print('Cost of method calling : ' + str(self.web3.fromWei(txn['gasPrice'] * txn['gas'] + txn['value'], 'ether')) + ' ETH')
                 signObj = self.web3.eth.account.signTransaction(txn, self.key.getPrivate())

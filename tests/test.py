@@ -12,9 +12,14 @@ sys.path.insert(0,'../bin')
 
 from net import Infura
 from verifier import Check
+from hash import soliditySha3
 from web3 import Web3
 
-
+solpath = '/home/abzu/PycharmProjects/Nim/res/solidity/'
+token = 'n9LBfW1SzRzIjZfK5MfC'
+newtoken = '9324c0d26478447aa2ccc26377e86dc7'
+path = '/home/abzu/.ethereum/rinkeby/keystore/UTC--2018-06-29T15-24-00.421088464Z--7f039dee9c7d69db4009089d60b0eb5f355c3a81'
+path2 = '/home/abzu/.ethereum/rinkeby/keystore/UTC--2018-07-23T14-16-06.281040785Z--030f7f7cc2689d4787a791501226680570d77372'
 
 testType = 'fast'
 
@@ -28,23 +33,35 @@ class InfuraTest(unittest.TestCase):
         self.B.decryptKey(path2, 'hola123')
         self.assertTrue(not self.A.isLock())
         self.assertTrue(not self.B.isLock())
-    @unittest.skip
+    #@unittest.skip
     def test_hash(self):
-        print('...Testing hashing capabilities.')
-        str = 'this is a test'
-        sign = self.A.signStr(str)
-        self.assertEqual(self.A.address, self.A.whoSign(sign.messageHash, sign.signature))
+        print('...test_hash()')
+        #str = 'this is a test'
+
+        #sign = self.A.signStr(str)
+        #self.assertEqual(self.A.address, self.A.whoSign(sign.messageHash, sign.signature))
+        ####
+
+        #address = self.A.deploy('test3.sol')
+        #a = self.B.call(address,'hash',4)[0]
+        #b = soliditySha3(['uint256'], [4])
+        #self.assertEqual(a, b)
+
+        #a = self.B.call(address, 'hash3')[0]
+        #print(a)
+        
+        #b = soliditySha3(['address'], [self.B.address])
+        #b = self.B.address
+        #print(b)
+        #self.assertEqual(a, b)
 
     @unittest.skipIf(testType == 'fast','Reduces Ether in account and is slow.')
     def test_send(self):
-        logging.info('...Testing ether transactions.')
+        print('...Testing ether transactions.')
         amount = 0.2
         balA = self.A.getBalance()
-        #time.sleep(2)
         balB = self.B.getBalance()
-        #time.sleep(2)
         self.A.send(self.B.address, amount)
-        #time.sleep(2)
         balA2 = self.A.getBalance()
         balB2 = self.B.getBalance()
         self.assertTrue((float(balA2) + amount) < balA)
@@ -56,17 +73,15 @@ class InfuraTest(unittest.TestCase):
         #Checks that a contract can be deployed, tests whether a value can be attached.
         print('...test_deploy()')
         balA = self.A.getBalance()
-        #time.sleep(2)
         print('A: ' + str(balA) + ' ' + self.A.address)
         address = self.A.deploy('greeter.sol', 'hi', value=0.15)
         print('A deployed contract at ' + address)
-        #time.sleep(2)
         balA2 = self.A.getBalance()
-        #time.sleep(2)
         print('A: ' + str(balA2) + ' ' + self.A.address)
         self.assertTrue(type(address) == str)
         self.assertTrue((float(balA2) + 0.15) < balA)
         print()
+
     @unittest.skipIf(testType == 'fast', 'Reduces Ether in account and is slow.')
     def test_methods(self):
         print('...test_methods()')
@@ -75,15 +90,11 @@ class InfuraTest(unittest.TestCase):
         print('A: ' + str(balA) + ' ' + self.A.address)
         print('B: ' + str(balB) + ' ' + self.B.address)
         address = self.A.deploy('test.sol',  value=0.2)
-        #time.sleep(3)
         balA2 = self.A.getBalance()
-        #time.sleep(2)
         print('A: ' + str(balA2) + ' ' + self.A.address)
-        #time.sleep(2)
         print('A deployed contract at '+ address)
         self.assertTrue(float(balA2) + 0.2 < balA)
         self.B.call(address, 'getBalance',5)
-        #time.sleep(2)
         balB2 = self.B.getBalance()
         print('B called getBalance(5)')
         self.assertTrue((float(balB2) + 0.2) > balB)
@@ -91,7 +102,7 @@ class InfuraTest(unittest.TestCase):
         print('A: ' + str(balA2) + ' ' + self.A.address)
         print('B: ' + str(balB2) + ' ' + self.B.address)
         print()
-    #@unittest.skip
+    @unittest.skip
     def test_check(self):
         #TODO: Not sending full funds only a fraction.
         print('...test_check()')
@@ -104,7 +115,7 @@ class InfuraTest(unittest.TestCase):
         print('B: ' + str(balB) + ' ' + self.B.address)
         print(receipt)
         slip = check2.claimPayment(receipt['address'], receipt['amount'], receipt['nonce'], receipt['signHexStr'])
-        print(str(int(slip[0])) + '   ' + str(int(slip[1])))
+
 
         balB2 = self.B.getBalance()
         print('B: ' + str(balB2) + ' ' + self.B.address)
@@ -142,7 +153,6 @@ if __name__ == '__main__':
     unittest.main()
 
 
-
 def noUnitTest():
     A = Infura('rinkeby', token)
     B = Infura('rinkeby', token)
@@ -150,6 +160,7 @@ def noUnitTest():
     B.decryptKey(path2, 'hola123')
     A.run()
     B.run()
+
     print('A: ' + str(A.getBalance()))
     print('B: ' + str(B.getBalance()))
     address = A.deploy('test.sol', 'a', 4, value=0.1)

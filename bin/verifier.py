@@ -14,7 +14,8 @@ class Check:
         hash = soliditySha3(["address", "uint256", "uint256", "address"], [recipient, amount, nonce, contractAddress])
         return {'signHexBytes':self.connection.signHash(hash).signature,
                 'signHexStr':Web3.toHex(self.connection.signHash(hash).signature),
-                'nonce':nonce, 'amount':amount, 'address':contractAddress, 'hash': hash}
+                'nonce':nonce, 'amount':amount, 'address':contractAddress, 'hash': hash
+                ,'hashNum':Web3.toInt(hash)}
 
     def write(self,recipient,amount):
         '''
