@@ -2,7 +2,7 @@
 
 import random
 
-from hash import soliditySha3,sha3,byte32
+from hash import soliditySha3,byte32
 from web3 import Web3
 
 class Check:
