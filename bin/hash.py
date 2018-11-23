@@ -5,14 +5,16 @@ of tools in dealing with private and public key operations.
 
 eth_account - useful for key operations and account encryption without running an ethereum node.
 """
-#TODO: Use eth_account in a more specialized way to provide a safer way to treat private keys.
-#TODO: Change byte32 into a decorator.
+
 
 from eth_account import Account
 from eth_account.messages import defunct_hash_message
 from web3 import Web3
 
 class Key:
+    '''
+        Class used to represent an ethereum json keyfile.
+    '''
     def __init__(self,path = None):
         if path != None:
             self.load(path)
@@ -53,7 +55,6 @@ class Key:
 
 def hashStr(msg):
     '''
-    Hash compatible with web.eth.sign() method.
     :param msg:
     :return:
     '''
@@ -61,6 +62,11 @@ def hashStr(msg):
 def hashBytes(n):
     return  defunct_hash_message(n)
 def byte32(val):
+    '''
+
+    :param val:(HexBytes)
+    :return:
+    '''
     return Web3.toHex(Web3.toBytes(val).rjust(32, b'\0'))
 
 
@@ -68,7 +74,7 @@ def format(signObj):
     '''
     Formats a web3py signature object to be sent to a solidity contract.
     :param signObj:
-    :return:
+    :return: Tuple with
     '''
     return (Web3.toHex(signObj.messageHash),signObj.v,byte32(signObj.r),byte32(signObj.s))
 
@@ -89,10 +95,18 @@ def decode(hexMsg,hexSig):
     return (hexMsgHash,v,hex_r,hex_s)
 def sha3txt(n):
     return Web3.sha3(text=n)
+
 def soliditySha3(types,values):
     '''
     :param types: list of solidity types(strings)
     :param values: list of values to hash (solidity primitives)
-    :return:
+    :return: Hash of values.(HexBytes)
     '''
     return Web3.soliditySha3(types,values)
+def eth_sign(msg):
+    '''
+
+    :param msg:
+    :return:
+    '''
+    return soliditySha3(['string','bytes32'],["\x19Ethereum Signed Message:\n32", msg])

@@ -1,45 +1,38 @@
-#Not meant to be used. Not complete.
 
+'''
+verifier.py - contains classes that represent common financial constructs
+'''
 import random
+import json
 
-from hash import soliditySha3,byte32
+from hash import soliditySha3,byte32,format
 from web3 import Web3
 
-class Check:
+
+class SimpleCheck:
     def __init__(self,connection):
         if connection.isRunning() and not connection.isLock():
             self.connection = connection
-    def signCheck(self, recipient, amount, nonce, contractAddress):
-        amount = Web3.toWei(amount,'ether')
-        hash = soliditySha3(["address", "uint256", "uint256", "address"], [recipient, amount, nonce, contractAddress])
-        return {'signHexBytes':self.connection.signHash(hash).signature,
-                'signHexStr':Web3.toHex(self.connection.signHash(hash).signature),
-                'nonce':nonce, 'amount':amount, 'address':contractAddress, 'hash': hash
-                ,'hashNum':Web3.toInt(hash)}
 
     def write(self,recipient,amount):
         '''
-            As more optimized versions of the cheque contract are created.
-            These will probably replace the programtheblockchain.com test2.sol
-            example.
-        '''
-        address = self.connection.deploy('test2.sol',price=4, value=amount)
-        print('Check deployed at: ' + address)
-        nonce = random.randrange(1,100000)
-        return self.signCheck(recipient,amount,nonce,address)
 
-    def claimPayment(self,address,amount,nonce,signature):
+        :param recipient: Address of check recipient(HexString).
+        :param amount: Amount in ether to be sent.(int)
+        :return: json with
         '''
-
-        :param address:
-        :param amount:
-        :param nonce:
-        :param signature:
-        :return:
-        '''
-        receipt = self.connection.call(address,'claimPayment',amount,nonce,signature)
-        return receipt[0]
-
+        self.address = self.connection.deploy('check.sol',price=4, value=amount)
+        nonce = random.randrange(1,10000)
+        print('Check deployed at: ' + self.address)
+        amount = Web3.toWei(amount, 'ether')
+        hash = byte32(soliditySha3(["address", "uint256","uint256","address"], [recipient, amount,nonce,self.address]))
+        sign = format(self.connection.signHash(hash))
+        check = {'address':self.address,'amount':amount,'nonce':nonce,'msgHash':sign[0],
+                 'v':sign[1],'r':sign[2],'s':sign[3]}
+        return json.dumps(check)
+    def claim(self,json_file):
+        check = json.loads(json_file)
+        return self.connection.call(check['address'],'claim',check['amount'],check['nonce'],check['msgHash'],check['v'],check['r'],check['s'])[1]
     def kill(self):
         '''
         Must be contract creator.

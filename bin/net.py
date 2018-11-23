@@ -21,8 +21,6 @@ solpath = '/home/abzu/PycharmProjects/Nim/res/solidity/'
 netIds = {'main':1,'morden':2,'ropsten':3,'rinkeby':4,'kovan':42,'sokol':77,'core':99}
 
 #TODO: Generalize all file paths.
-#TODO: Expand list of Ethereum network IDs.
-#TODO:Expand support and test other Eth networks.
 #TODO: Create custom exceptions.
 #TODO: Add appropiate gas price recalculation. Connecting to eth gas station.
 
@@ -87,7 +85,7 @@ class Connection:
 
     def decryptKey(self,path,passphrase):
         '''
-        :param path: Path to keyfile.
+        :param path: Path to json keyfile.
         :param passphrase: Decrypts keyfile.
         :return: Decrypts keyfile(JSON) with passphrase.
         TODO: Handle exceptions better here.
@@ -272,7 +270,15 @@ class Infura(Connection):
                 txnHash = byte32(self.web3.eth.sendRawTransaction(signObj.rawTransaction))
                 return (func(*arg).call(), self.wait_for_receipt(txnHash, 10))
 
-
+    def events(self,contractAddress):
+        self.c.execute('SELECT contractObj FROM Deployed WHERE address = ?', (contractAddress,))
+        data = self.c.fetchone()
+        if data == None:
+            print('Contract not deployed through Nim.')
+            return False
+        interface = pickle.loads(data[0])
+        contract = self.web3.eth.contract(abi=interface['abi'], bytecode=interface['bin'], address=contractAddress)
+        print(contract.events.Address())
 
 
 
