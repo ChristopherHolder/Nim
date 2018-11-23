@@ -3,30 +3,34 @@ Author: Christopher Holder
 eth.py - Manages the connections between the Ethereum Node and the program through
 a Web3py wrapper.
 """
+import os
 import time
 import sqlite3
 import pickle
 import datetime
 import logging
+import exc
 
-
+from abc import ABC
 from solc import compile_source
 from web3 import Web3,HTTPProvider,IPCProvider,middleware
 from web3.middleware import geth_poa_middleware
-from hash import Key,byte32,hashBytes,hashStr
+from hash import Key,byte32,hashStr
 
 
-solpath = '/home/abzu/PycharmProjects/Nim/res/solidity/'
-
+cwd = os.getcwd().split('/')
+cwd.pop()
+cwd.append('res')
+cwd.append('solidity')
+cwd.append('')
+solpath = '/'.join(cwd)
 netIds = {'main':1,'morden':2,'ropsten':3,'rinkeby':4,'kovan':42,'sokol':77,'core':99}
 
-#TODO: Generalize all file paths.
 #TODO: Create custom exceptions.
-#TODO: Add appropiate gas price recalculation. Connecting to eth gas station.
-
 #TODO: Time in between waiting for server to response.
+#TODO: Provide richer information when returning.
 
-class Connection:
+class Connection(ABC):
     '''
     Base class for the different type of connections with the Ethereum network.
     Not meant to be instantiated by itself.
@@ -39,7 +43,6 @@ class Connection:
         self.key = Key()
         self.conn = sqlite3.connect('../res/nim.db')
         self.c = self.conn.cursor()
-        #self.c.execute('DROP TABLE Deployed')
         self.c.execute('CREATE TABLE IF NOT EXISTS Deployed (address STRING UNIQUE,filename STRING,contractObj BLOB,dat datetime)')
         self.conn.commit()
 
@@ -53,9 +56,9 @@ class Connection:
                 #Default location for geth.
                 self.web3 = Web3(IPCProvider())
             self.time = time.asctime(time.localtime())
-        except:
-            print('Connection Error')
-            return False
+        except Exception as e:
+            print(e + ' ' + str(type(e)))
+            raise exc.Connection('__call__()')
         else:
             #print('...Connection established with the ' + self.network + ' Ethereum network')
             logging.info('...Connection established with the ' + self.network + ' Ethereum network')
@@ -137,11 +140,15 @@ class Connection:
         return self.web3.fromWei(self.web3.eth.getBalance(self.address), 'ether')
 
     def searchContract(self,filename):
+        '''
+
+        :param filename: name of the solidity filename.(String)
+        :return:
+        '''
         self.c.execute('SELECT address FROM Deployed WHERE filename = ? ORDER BY dat DESC',(filename,))
         data = self.c.fetchone()
         if data == None:
-            print('Contract not deployed through Nim')
-            return False
+            raise exc.ContractNotDeployed('searchContract(' + filename+')')
         return data[0]
 
 class Infura(Connection):
@@ -160,6 +167,7 @@ class Infura(Connection):
         :return: Receipt of the transaction.
         '''
         # Gas estimation also depends on the specified ethereum network
+
         nonce = self.web3.eth.getTransactionCount(self.key.address)
         gas = self.web3.eth.estimateGas({'to': to, 'from': self.key.address, 'value': Web3.toWei(value, 'ether')})
         trans = {'to': to,'value': Web3.toWei(value, 'ether'),
@@ -170,7 +178,7 @@ class Infura(Connection):
         signObj = self.web3.eth.account.signTransaction(trans, self.key.getPrivate())
         try:
             txnHash = self.web3.eth.sendRawTransaction(signObj.rawTransaction)
-        except ValueError as e:
+        except Exception as e:
             print(e + ' ' + str(type(e)))
         else:
             return self.wait_for_receipt(byte32(txnHash), 10)
@@ -233,14 +241,12 @@ class Infura(Connection):
         self.c.execute('SELECT contractObj FROM Deployed WHERE address = ?', (contractAddress,))
         data = self.c.fetchone()
         if data == None:
-            print('Contract not deployed through Nim.')
-            return False
+            raise exc.ContractNotDeployed('Infura.call()')
         interface = pickle.loads(data[0])
         contract = self.web3.eth.contract(abi=interface['abi'], bytecode=interface['bin'], address=contractAddress)
         #print(contract.functions.__dict__.keys())
         if methodName not in contract.functions.__dict__.keys():
-            print('Method not in contract')
-            return False
+            raise exc.MethodNotDefined('Infura.call()')
         if methodName == 'fallback':
             func = contract.functions.fallback
         else:
@@ -255,30 +261,16 @@ class Infura(Connection):
                 trans = {'gasPrice': Web3.toWei(price, 'gwei'), 'value': Web3.toWei(value, 'ether'),
                          'nonce': nonce, 'chainId': netIds[self.network],'from':self.address,'gas':90000}
                 txn = func(*arg).buildTransaction(trans)
-                #print(txn)
+
 
             except ValueError as e:
-                print('Error in transaction building')
-                '''
-                if e.args[0]['message'] == 'gas required exceeds allowance or always failing transaction':
-                    print('Manually assigning gas: ')
-                    trans['gas'] += 10000
-                '''
+                raise exc.TransactionBuild('Infura.call()')
             else:
                 print('Cost of method calling : ' + str(self.web3.fromWei(txn['gasPrice'] * txn['gas'] + txn['value'], 'ether')) + ' ETH')
                 signObj = self.web3.eth.account.signTransaction(txn, self.key.getPrivate())
                 txnHash = byte32(self.web3.eth.sendRawTransaction(signObj.rawTransaction))
                 return (func(*arg).call(), self.wait_for_receipt(txnHash, 10))
 
-    def events(self,contractAddress):
-        self.c.execute('SELECT contractObj FROM Deployed WHERE address = ?', (contractAddress,))
-        data = self.c.fetchone()
-        if data == None:
-            print('Contract not deployed through Nim.')
-            return False
-        interface = pickle.loads(data[0])
-        contract = self.web3.eth.contract(abi=interface['abi'], bytecode=interface['bin'], address=contractAddress)
-        print(contract.events.Address())
 
 
 

@@ -8,11 +8,9 @@ nim.py - Main class implementations for the NIM prototype.
 from abc import abstractmethod,ABC
 
 
-
-
 class StateChannel(ABC):
     @abstractmethod
-    def connect(self):
+    def start(self):
         pass
 
     @abstractmethod
@@ -24,6 +22,21 @@ class StateChannel(ABC):
         pass
 
     @abstractmethod
+    def kill(self):
+        pass
+
+class PaymentChannel(StateChannel):
+
+    def start(self):
+        #Deploy smart contract
+        pass
+
+    def lock(self):
+        pass
+
+    def unlock(self):
+        pass
+
     def kill(self):
         pass
 

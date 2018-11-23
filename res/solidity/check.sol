@@ -8,7 +8,8 @@ contract Check {
     function Check() public payable { }
 
     function claim(uint256 amount,uint256 nonce,bytes32 msgHash,uint8 v,bytes32 r,bytes32 s) public {
-
+        require(!nonces[nonce]);
+        nonces[nonce] = true;
         bytes32 hash = keccak256(msg.sender,amount,nonce,this);
         address ad1 = ecrecover(hash,v,r,s);
         address ad2 =  ecrecover(msgHash, v, r, s);

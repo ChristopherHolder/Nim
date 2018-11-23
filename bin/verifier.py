@@ -11,6 +11,7 @@ from web3 import Web3
 
 class SimpleCheck:
     def __init__(self,connection):
+        self.nonces = set()
         if connection.isRunning() and not connection.isLock():
             self.connection = connection
 
