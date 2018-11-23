@@ -1,6 +1,6 @@
 # Nim
 
-Project Nim seeks to deploy a state channel infrastructure for the communication with the Ethereum Blockchain and Android Clients.
+Project Nim seeks to deploy a state channel infrastructure for the communication with the Ethereum Blockchain.
 Interested ? go to www.projectnim.org
 
 # Phase 1: Python prototyping 
@@ -12,6 +12,8 @@ Interested ? go to www.projectnim.org
  - Smart contract and network testing responses. 
  
  - Unit testing.
+ 
+ - Infura support added.
  
 # Phase 2: Restructuring (Current) 
 
