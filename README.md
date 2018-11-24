@@ -15,7 +15,7 @@ Interested ? go to www.projectnim.org
  
  - Infura support added.
  
-# Phase 2: Restructuring (Current) 
+# Phase 2: Restructuring 
 
  - Added SQLite3 Support.
  
@@ -26,3 +26,7 @@ Interested ? go to www.projectnim.org
  - Creating Custom Exceptions.
  
  - Added Check contracts.
+
+#Phase 3: State Channels (Current) 
+
+ - Adding State Channel Abstract class.
