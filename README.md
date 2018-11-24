@@ -27,6 +27,6 @@ Interested ? go to www.projectnim.org
  
  - Added Check contracts.
 
-#Phase 3: State Channels (Current) 
+# Phase 3: State Channels (Current) 
 
  - Adding State Channel Abstract class.
