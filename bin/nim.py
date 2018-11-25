@@ -25,7 +25,20 @@ class StateChannel(ABC):
     def kill(self):
         pass
 
+class PaymentChannel(StateChannel):
 
+    def start(self):
+        #Deploy smart contract
+        pass
+
+    def lock(self):
+        pass
+
+    def unlock(self):
+        pass
+
+    def kill(self):
+        pass
 
 
 if __name__ == '__main__':

@@ -24,6 +24,8 @@ class SimpleCheck:
         '''
         self.address = self.connection.deploy('check.sol',price=4, value=amount)
         nonce = random.randrange(1,10000)
+        while nonce in self.nonces:
+            nonce = random.randrange(1,10000)
         print('Check deployed at: ' + self.address)
         amount = Web3.toWei(amount, 'ether')
         hash = byte32(soliditySha3(["address", "uint256","uint256","address"], [recipient, amount,nonce,self.address]))

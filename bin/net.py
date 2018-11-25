@@ -58,7 +58,7 @@ class Connection(ABC):
             self.time = time.asctime(time.localtime())
         except Exception as e:
             print(e + ' ' + str(type(e)))
-            raise exc.Connection('__call__()')
+            raise exc.Connection('__call__')
         else:
             #print('...Connection established with the ' + self.network + ' Ethereum network')
             logging.info('...Connection established with the ' + self.network + ' Ethereum network')
