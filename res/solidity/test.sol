@@ -2,7 +2,7 @@ pragma solidity ^0.4.0;
 
 contract Test{
     address owner;
-    constructor() payable {
+    function Test() payable {
         owner = msg.sender;
     }
 
