@@ -51,7 +51,7 @@ py-evm==0.2.0a18
 py-geth==2.0.1
 py-solc==3.2.0
 pycparser==2.18
-pycryptodome==3.6.4
+pycryptodome==3.6.6
 pyethash==0.1.27
 Pygments==2.2.0
 pysha3==1.0.2
